@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Матрица компетенций</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root {
+  --bg: #F5F3EE; --surface: #FDFCFA; --border: #E2DDD6; --border-strong: #C8C2B8;
+  --text: #1A1714; --text-2: #6B6560; --text-3: #A09A93;
+  --accent: #2D5A3D; --accent-light: #EAF2EC;
+  --warn: #8B4513; --warn-light: #FDF0E8;
+  --danger: #B83232; --danger-light: #FDF0F0;
+  --info: #1D4E89; --info-light: #EEF3FA;
+  --radius: 12px; --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* HOME */
+#home { align-items: center; justify-content: center; padding: 2rem; }
+.home-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3rem 2.5rem; max-width: 440px; width: 100%; text-align: center; box-shadow: var(--shadow); }
+.home-logo { font-family: 'Instrument Serif', serif; font-size: 13px; letter-spacing: .15em; text-transform: uppercase; color: var(--text-3); margin-bottom: 2rem; }
+.home-title { font-family: 'Instrument Serif', serif; font-size: 32px; line-height: 1.2; margin-bottom: .75rem; }
+.home-sub { font-size: 14px; color: var(--text-2); margin-bottom: 2.5rem; line-height: 1.7; }
+.btn-row { display: flex; flex-direction: column; gap: 10px; }
+
+/* BUTTONS */
+.btn { font-family: 'Onest', sans-serif; font-size: 14px; font-weight: 500; padding: 12px 24px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; transition: all .15s; }
+.btn:hover { border-color: var(--border-strong); background: var(--bg); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover:not(:disabled) { background: #234830; border-color: #234830; }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text-2); font-size: 13px; }
+.btn-ghost:hover { color: var(--text); background: var(--bg); }
+.btn-sm { padding: 8px 16px; font-size: 13px; }
+
+/* SURVEY */
+#survey { background: var(--bg); }
+.survey-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 10; }
+.survey-header-title { font-size: 14px; font-weight: 500; flex: 1; }
+.progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; width: 120px; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+.survey-body { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.step { display: none; }
+.step.active { display: block; }
+.step-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; }
+.step-title { font-family: 'Instrument Serif', serif; font-size: 26px; line-height: 1.3; margin-bottom: .5rem; }
+.step-sub { font-size: 14px; color: var(--text-2); margin-bottom: 2rem; line-height: 1.6; }
+.field-group { margin-bottom: 1.25rem; }
+.field-label { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; display: block; }
+.field-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-family: 'Onest', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .15s; }
+.field-input:focus { border-color: var(--accent); }
+.role-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.role-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; cursor: pointer; transition: all .15s; background: var(--surface); }
+.role-card:hover { border-color: var(--border-strong); }
+.role-card.selected { border-color: var(--accent); background: var(--accent-light); }
+.role-name { font-size: 13px; font-weight: 500; }
+.role-cluster { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.q-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 10px; }
+.q-text { font-size: 14px; font-weight: 500; margin-bottom: 12px; line-height: 1.5; }
+.scale-row { display: flex; gap: 6px; }
+.scale-btn { flex: 1; padding: 8px 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-family: 'Onest', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; color: var(--text-2); }
+.scale-btn:hover { border-color: var(--border-strong); color: var(--text); }
+.scale-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+.scale-hint { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); margin-top: 5px; }
+.open-q textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-family: 'Onest', sans-serif; font-size: 13px; color: var(--text); outline: none; resize: vertical; min-height: 70px; transition: border-color .15s; margin-top: 8px; }
+.open-q textarea:focus { border-color: var(--accent); }
+.section-sep { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); margin: 1.75rem 0 .75rem; }
+.nav-row { display: flex; gap: 10px; margin-top: 2rem; }
+
+/* DONE */
+#done { align-items: center; justify-content: center; padding: 2rem; }
+.done-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3rem 2.5rem; max-width: 440px; width: 100%; text-align: center; box-shadow: var(--shadow); }
+.done-icon { width: 56px; height: 56px; background: var(--accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 24px; }
+
+/* ADMIN LOGIN */
+#admin-login { align-items: center; justify-content: center; padding: 2rem; }
+.login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem; max-width: 380px; width: 100%; box-shadow: var(--shadow); }
+.login-title { font-family: 'Instrument Serif', serif; font-size: 26px; margin-bottom: .5rem; }
+.login-sub { font-size: 13px; color: var(--text-2); margin-bottom: 1.75rem; }
+.error-msg { font-size: 13px; color: var(--danger); margin-top: .5rem; display: none; }
+
+/* ADMIN PANEL */
+#admin-panel { background: var(--bg); }
+.admin-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: .875rem 1.5rem; display: flex; align-items: center; gap: 10px; }
+.admin-logo { font-family: 'Instrument Serif', serif; font-size: 18px; }
+.admin-badge { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; background: var(--accent-light); color: var(--accent); padding: 3px 8px; border-radius: 4px; }
+.admin-body { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; }
+.stat-num { font-family: 'Instrument Serif', serif; font-size: 32px; }
+.stat-label { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.section-title-sm { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1rem; }
+.resp-list { display: flex; flex-direction: column; gap: 8px; }
+.resp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: border-color .15s; }
+.resp-card:hover { border-color: var(--border-strong); }
+.resp-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+.resp-info { flex: 1; min-width: 0; }
+.resp-name { font-size: 14px; font-weight: 500; }
+.resp-meta { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+.resp-status { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 500; flex-shrink: 0; }
+.status-new { background: var(--info-light); color: var(--info); }
+.status-generated { background: var(--warn-light); color: var(--warn); }
+.status-sent { background: var(--accent-light); color: var(--accent); }
+
+/* DETAIL */
+#admin-detail { background: var(--bg); }
+.detail-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: .875rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+.detail-body { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+.detail-name { font-family: 'Instrument Serif', serif; font-size: 28px; margin-bottom: .25rem; }
+.detail-role { font-size: 14px; color: var(--text-2); margin-bottom: 2rem; }
+.answers-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+.answers-section-title { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 1rem; }
+.answer-row { display: flex; align-items: center; gap: 1rem; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.answer-row:last-child { border-bottom: none; }
+.answer-q { font-size: 13px; color: var(--text-2); flex: 1; line-height: 1.5; }
+.answer-val { font-size: 14px; font-weight: 600; color: var(--accent); min-width: 24px; text-align: center; }
+.score-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; width: 80px; flex-shrink: 0; }
+.score-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.open-answer { font-size: 13px; color: var(--text); background: var(--bg); border-radius: 6px; padding: 8px 10px; margin: 4px 0 8px; font-style: italic; line-height: 1.6; }
+.matrix-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+.matrix-placeholder { text-align: center; padding: 2rem; color: var(--text-3); font-size: 14px; }
+.matrix-text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; display: none; }
+.matrix-text.visible { display: block; }
+.matrix-edit { width: 100%; min-height: 220px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-family: 'Onest', sans-serif; font-size: 13px; line-height: 1.7; color: var(--text); outline: none; resize: vertical; display: none; }
+.matrix-edit.visible { display: block; }
+.action-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); align-items: center; }
+.ml-auto { margin-left: auto; }
+.generating { display: none; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.generating.visible { display: flex; }
+.dot-pulse { display: flex; gap: 4px; }
+.dot-pulse span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+.dot-pulse span:nth-child(2) { animation-delay: .2s; }
+.dot-pulse span:nth-child(3) { animation-delay: .4s; }
+@keyframes pulse { 0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)} }
+.sent-badge { display: none; align-items: center; gap: 6px; font-size: 13px; color: var(--accent); font-weight: 500; }
+.sent-badge.visible { display: flex; }
+
+/* SETTINGS */
+#admin-settings { background: var(--bg); }
+.settings-body { max-width: 600px; margin: 2rem auto; padding: 0 1.5rem; }
+.settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem; }
+.settings-section-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1.25rem; }
+.info-box { background: var(--info-light); border-radius: var(--radius-sm); padding: 1rem 1.25rem; font-size: 13px; color: var(--text-2); line-height: 1.8; margin-top: 1rem; }
+.info-box code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: monospace; color: var(--text); }
+
+/* LOADING */
+.loading-overlay { display: none; position: fixed; inset: 0; background: rgba(245,243,238,.85); z-index: 50; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+.loading-overlay.visible { display: flex; }
+.loading-text { font-size: 14px; color: var(--text-2); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--text); color: #fff; font-size: 13px; padding: 10px 20px; border-radius: var(--radius-sm); opacity: 0; transition: all .3s; pointer-events: none; z-index: 100; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-3); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="home-card">
+    <div class="home-logo">Команда · 2025</div>
+    <h1 class="home-title">Матрица<br><em>компетенций</em></h1>
+    <p class="home-sub">Пройди опрос самооценки — займёт около 5 минут. Результаты увидит только администратор.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showScreen('survey');initSurvey()">Пройти опрос →</button>
+      <button class="btn" onclick="showScreen('admin-login')">Войти как администратор</button>
+    </div>
+  </div>
+</div>
+
+<!-- SURVEY -->
+<div id="survey" class="screen">
+  <div class="survey-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('home')">← Назад</button>
+    <span class="survey-header-title" id="survey-step-label">Шаг 1 из 3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:33%"></div></div>
+  </div>
+  <div class="survey-body">
+    <div class="step active" id="step-1">
+      <div class="step-label">Шаг 1 из 3</div>
+      <h2 class="step-title">Расскажи о себе</h2>
+      <p class="step-sub">Вводные данные и универсальные soft skills.</p>
+      <div class="field-group">
+        <label class="field-label">Имя и фамилия</label>
+        <input class="field-input" id="inp-name" type="text" placeholder="Иван Петров">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Рабочий email</label>
+        <input class="field-input" id="inp-email" type="email" placeholder="ivan@company.com">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Сколько месяцев ты в команде?</label>
+        <input class="field-input" id="inp-months" type="number" min="0" placeholder="6">
+      </div>
+      <div class="section-sep">Soft skills — для всех</div>
+      <div id="soft-questions"></div>
+      <div class="section-sep">Зоны роста</div>
+      <div class="q-block">
+        <div class="q-text">Что тебе даётся легче всего в работе?</div>
+        <div class="open-q"><textarea id="open-1" placeholder="1–2 предложения..."></textarea></div>
+      </div>
+      <div class="q-block">
+        <div class="q-text">В чём хочешь вырасти за следующие 3–6 месяцев?</div>
+        <div class="open-q"><textarea id="open-2" placeholder="Опиши конкретно..."></textarea></div>
+      </div>
+      <div class="q-block">
+        <div class="q-text">Какие инструменты или навыки хочешь освоить?</div>
+        <div class="open-q"><textarea id="open-3" placeholder="Инструменты, курсы, навыки..."></textarea></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-primary" onclick="goStep(2)">Продолжить →</button>
+      </div>
+    </div>
+
+    <div class="step" id="step-2">
+      <div class="step-label">Шаг 2 из 3</div>
+      <h2 class="step-title">Выбери свою роль</h2>
+      <p class="step-sub">На следующем шаге — вопросы именно по твоему направлению.</p>
+      <div class="role-grid" id="role-grid"></div>
+      <div class="nav-row">
+        <button class="btn" onclick="goStep(1)">← Назад</button>
+        <button class="btn btn-primary" onclick="goStep(3)">Продолжить →</button>
+      </div>
+    </div>
+
+    <div class="step" id="step-3">
+      <div class="step-label">Шаг 3 из 3</div>
+      <h2 class="step-title" id="cluster-title">Профессиональные компетенции</h2>
+      <p class="step-sub">Оцени каждый навык по шкале от 1 до 4.</p>
+      <div id="cluster-questions"></div>
+      <div class="nav-row">
+        <button class="btn" onclick="goStep(2)">← Назад</button>
+        <button class="btn btn-primary" id="btn-submit" onclick="submitSurvey()">Отправить результаты →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DONE -->
+<div id="done" class="screen">
+  <div class="done-card">
+    <div class="done-icon">✓</div>
+    <h2 style="font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:.5rem">Готово!</h2>
+    <p style="font-size:14px;color:var(--text-2);margin-bottom:2rem;line-height:1.7">Ответы сохранены. Администратор сформирует матрицу и пришлёт тебе результаты на почту.</p>
+    <button class="btn btn-primary" onclick="showScreen('home')">На главную</button>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div id="admin-login" class="screen">
+  <div class="login-card">
+    <h2 class="login-title">Вход для<br><em style="font-family:'Instrument Serif',serif">администратора</em></h2>
+    <p class="login-sub">Доступ только для руководителей команды.</p>
+    <div class="field-group">
+      <label class="field-label">Пароль</label>
+      <input class="field-input" id="admin-pass" type="password" placeholder="Введи пароль" onkeydown="if(event.key==='Enter')adminLogin()">
+      <div class="error-msg" id="login-error">Неверный пароль</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:1rem">
+      <button class="btn" onclick="showScreen('home')">Назад</button>
+      <button class="btn btn-primary" onclick="adminLogin()" style="flex:1">Войти →</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-3);margin-top:1rem;text-align:center">Пароль: <strong>admin2025</strong></p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-panel" class="screen">
+  <div class="admin-header">
+    <span class="admin-logo">Матрица</span>
+    <span class="admin-badge">Администратор</span>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-left:auto;margin-right:4px">⚙ Настройки</button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('home')">Выйти</button>
+  </div>
+  <div class="admin-body">
+    <div class="admin-stats" id="admin-stats"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <span class="section-title-sm" style="margin:0">Сотрудники</span>
+      <button class="btn btn-sm" onclick="loadAndRenderPanel()" style="margin-left:auto">↻ Обновить</button>
+    </div>
+    <div class="resp-list" id="resp-list">
+      <div class="empty-state">Загрузка...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN DETAIL -->
+<div id="admin-detail" class="screen">
+  <div class="detail-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Все сотрудники</button>
+    <span class="admin-badge" style="margin-left:auto">Администратор</span>
+  </div>
+  <div class="detail-body" id="detail-content"></div>
+</div>
+
+<!-- ADMIN SETTINGS -->
+<div id="admin-settings" class="screen">
+  <div class="admin-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
+    <span class="admin-badge" style="margin-left:auto">Настройки</span>
+  </div>
+  <div class="settings-body">
+    <div style="font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:2rem;">Настройки</div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Google Sheets (база данных)</div>
+      <div class="field-group">
+        <label class="field-label">URL вашего Apps Script (Web App URL)</label>
+        <input class="field-input" id="gs-url" placeholder="https://script.google.com/macros/s/...../exec">
+      </div>
+      <button class="btn btn-primary" onclick="saveGSSettings()">Сохранить</button>
+      <div class="info-box">
+        <strong style="color:var(--info);font-weight:500;">Как подключить Google Sheets — инструкция внутри приложения:</strong><br>
+        Нажми кнопку «Инструкция» ниже — откроется пошаговый гайд.
+      </div>
+      <div style="margin-top:1rem;">
+        <button class="btn" onclick="showGSInstructions()">📋 Показать инструкцию</button>
+        <button class="btn btn-sm" onclick="testGSConnection()" style="margin-left:8px">Проверить подключение</button>
+      </div>
+      <div id="gs-instructions" style="display:none;margin-top:1.5rem;background:var(--bg);border-radius:var(--radius-sm);padding:1.25rem;font-size:13px;line-height:2;color:var(--text-2);">
+        <strong style="color:var(--text);font-size:14px;">Пошаговая инструкция — Google Sheets</strong><br><br>
+        <strong style="color:var(--text)">Шаг 1.</strong> Создай новую Google Таблицу на <a href="https://sheets.google.com" target="_blank" style="color:var(--accent)">sheets.google.com</a><br>
+        <strong style="color:var(--text)">Шаг 2.</strong> Открой: <strong style="color:var(--text)">Расширения → Apps Script</strong><br>
+        <strong style="color:var(--text)">Шаг 3.</strong> Вставь код ниже в редактор (замени всё что там есть):<br>
+        <pre style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1rem;margin:.75rem 0;font-size:11px;overflow-x:auto;white-space:pre-wrap;font-family:monospace;line-height:1.6;">const SHEET_NAME = 'Ответы';
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_NAME);
+      sheet.appendRow(['id','name','email','role','cluster','months',
+        'submittedAt','status','matrix',
+        'soft_0','soft_1','soft_2','soft_3','soft_4','soft_5',
+        'cluster_0','cluster_1','cluster_2','cluster_3','cluster_4',
+        'cluster_5','cluster_6','cluster_7','cluster_8',
+        'open_1','open_2','open_3']);
+    }
+    if (data.action === 'submit') {
+      const sa = data.softAnswers || {};
+      const ca = data.clusterAnswers || {};
+      const oa = data.openAnswers || {};
+      sheet.appendRow([
+        data.id, data.name, data.email,
+        data.role?.name, data.role?.cluster, data.months,
+        data.submittedAt, 'new', '',
+        sa[0]||'',sa[1]||'',sa[2]||'',sa[3]||'',sa[4]||'',sa[5]||'',
+        ca[0]||'',ca[1]||'',ca[2]||'',ca[3]||'',ca[4]||'',
+        ca[5]||'',ca[6]||'',ca[7]||'',ca[8]||'',
+        oa[1]||'',oa[2]||'',oa[3]||''
+      ]);
+      return ok({saved: true});
+    }
+    if (data.action === 'getAll') {
+      const rows = sheet.getDataRange().getValues();
+      const headers = rows[0];
+      const records = rows.slice(1).map(r => {
+        const obj = {};
+        headers.forEach((h,i) => obj[h] = r[i]);
+        return obj;
+      });
+      return ok(records);
+    }
+    if (data.action === 'update') {
+      const rows = sheet.getDataRange().getValues();
+      for (let i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]) === String(data.id)) {
+          if (data.matrix !== undefined)
+            sheet.getRange(i+1, 9).setValue(data.matrix);
+          if (data.status !== undefined)
+            sheet.getRange(i+1, 8).setValue(data.status);
+          break;
+        }
+      }
+      return ok({updated: true});
+    }
+    return ok({error: 'unknown action'});
+  } catch(err) {
+    return ok({error: err.message});
+  }
+}
+
+function doGet(e) {
+  return ok({status: 'ok'});
+}
+
+function ok(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+        <strong style="color:var(--text)">Шаг 4.</strong> Нажми <strong style="color:var(--text)">Сохранить (Ctrl+S)</strong><br>
+        <strong style="color:var(--text)">Шаг 5.</strong> Нажми <strong style="color:var(--text)">Развернуть → Новое развёртывание</strong><br>
+        &nbsp;&nbsp;— Тип: <strong style="color:var(--text)">Веб-приложение</strong><br>
+        &nbsp;&nbsp;— Выполнять от имени: <strong style="color:var(--text)">Я (свой аккаунт)</strong><br>
+        &nbsp;&nbsp;— Доступ: <strong style="color:var(--text)">Все</strong><br>
+        <strong style="color:var(--text)">Шаг 6.</strong> Нажми <strong style="color:var(--text)">Развернуть</strong> → скопируй <strong style="color:var(--text)">URL веб-приложения</strong><br>
+        <strong style="color:var(--text)">Шаг 7.</strong> Вставь URL в поле выше и нажми Сохранить
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">EmailJS (отправка на почту)</div>
+      <div class="field-group">
+        <label class="field-label">Public Key</label>
+        <input class="field-input" id="ejs-public-key" placeholder="AbCdEfGhIjKlMnOp">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Service ID</label>
+        <input class="field-input" id="ejs-service-id" placeholder="service_xxxxxxx">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Template ID</label>
+        <input class="field-input" id="ejs-template-id" placeholder="template_xxxxxxx">
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="saveEmailJSSettings()">Сохранить</button>
+        <button class="btn" onclick="testEmail()">Тест отправки</button>
+      </div>
+      <div class="info-box">
+        1. Зайди на <a href="https://emailjs.com" target="_blank" style="color:var(--info)">emailjs.com</a> → Sign Up (бесплатно)<br>
+        2. <strong style="color:var(--text)">Email Services</strong> → Add New Service → подключи Gmail → скопируй Service ID<br>
+        3. <strong style="color:var(--text)">Email Templates</strong> → Create → используй переменные:<br>
+        &nbsp;&nbsp;<code>{{to_email}}</code> <code>{{to_name}}</code> <code>{{matrix_text}}</code><br>
+        4. <strong style="color:var(--text)">Account → General</strong> → скопируй Public Key
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Claude API</div>
+      <div class="field-group">
+        <label class="field-label">API Key</label>
+        <input class="field-input" id="claude-key" type="password" placeholder="sk-ant-...">
+      </div>
+      <button class="btn btn-primary" onclick="saveClaudeKey()">Сохранить</button>
+      <div class="info-box">
+        Получи ключ на <a href="https://console.anthropic.com" target="_blank" style="color:var(--info)">console.anthropic.com</a> → API Keys → Create Key
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="dot-pulse"><span></span><span></span><span></span></div>
+  <div class="loading-text" id="loading-text">Загрузка...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONSTANTS ───
+const ADMIN_PASS = 'admin2025';
+const SOFT_QUESTIONS = [
+  'Я соблюдаю дедлайны и предупреждаю заранее, если что-то идёт не так',
+  'Я умею расставлять приоритеты, когда задач много',
+  'Я открыто принимаю обратную связь и применяю её',
+  'Я инициативен(на): предлагаю улучшения, не жду задачи сверху',
+  'Я эффективно коммуницирую внутри команды',
+  'Я быстро адаптируюсь к изменениям'
+];
+const ROLES = [
+  {name:'Head of SMM',cluster:'management'},{name:'Head of PR',cluster:'management'},
+  {name:'Head of Marketing',cluster:'management'},{name:'Operation Manager',cluster:'management'},
+  {name:'TL SMM',cluster:'smm'},{name:'SMM Tier-2',cluster:'smm'},
+  {name:'SMM Tier-3',cluster:'smm'},{name:'SMM CIS',cluster:'smm'},
+  {name:'SMM & Media Aff',cluster:'smm'},{name:'PR Manager',cluster:'pr'},
+  {name:'PR&CM Manager',cluster:'pr'},{name:'Content Producer',cluster:'content'},
+  {name:'TL Copywriters',cluster:'content'},{name:'Copywriter',cluster:'content'},
+  {name:'Targetolog',cluster:'performance'},{name:'Media Buying',cluster:'performance'},
+];
+const CLUSTER_LABELS = {smm:'SMM',pr:'PR',content:'Content',performance:'Performance',management:'Management'};
+const CLUSTER_QUESTIONS = {
+  smm:[
+    'Понимаю алгоритмы платформ (Instagram, TikTok, ВК) и адаптирую контент',
+    'Самостоятельно составляю контент-план на месяц вперёд',
+    'Создаю Reels/Shorts: от идеи до публикации, включая монтаж',
+    'Анализирую статистику и делаю выводы для следующего периода',
+    'Работаю с таргетированной рекламой: настраиваю, читаю результаты',
+    'Слежу за визуальным стилем, редактирую фото/видео под бренд',
+    'Работаю с блогерами: поиск, переговоры, контроль размещений',
+    'Генерирую свежие идеи без подсказок и шаблонов',
+    'Замечаю тренды и быстро внедряю их в работу',
+  ],
+  pr:[
+    'Пишу пресс-релизы и питчи, которые получают отклик от редакций',
+    'Веду актуальную медиабазу журналистов',
+    'Организую мероприятия от концепции до постивентной аналитики',
+    'Знаю, как действовать в кризисной ситуации — есть план',
+    'Регулярно мониторю медиапространство и упоминания бренда',
+    'Выстраиваю и поддерживаю коммьюнити вокруг бренда',
+    'Умею вести переговоры с журналистами, партнёрами, спикерами',
+    'Сохраняю спокойствие и чёткость действий под давлением',
+    'Думаю стратегически: вижу влияние действий на репутацию в долгую',
+  ],
+  content:[
+    'Пишу тексты в нужном tone of voice без правок редактора',
+    'Редактирую чужие тексты: нахожу смысловые и стилистические ошибки',
+    'Умею брифовать авторов: чётко ставлю задачу и ожидания',
+    'Работаю с CMS: публикую, форматирую, структурирую материалы',
+    'Пишу видеосценарии: структура, хук, призыв к действию',
+    'Использую AI-инструменты в работе с контентом',
+    'Понимаю аудиторию: пишу для людей, а не для алгоритмов',
+    'Замечаю детали: опечатки, логику, нарушение стиля',
+    'Даю конструктивную обратную связь автору, не обидев его',
+  ],
+  performance:[
+    'Самостоятельно настраиваю и веду кампании (Meta, Google, ВК)',
+    'Работаю с пикселями, UTM-метками и сквозной аналитикой',
+    'Провожу A/B тесты: гипотеза → настройка → анализ',
+    'Управляю бюджетом кампаний и оптимизирую стоимость результата',
+    'Сегментирую и парсю аудитории под разные типы кампаний',
+    'Анализирую воронку и понимаю, где теряется аудитория',
+    'Мыслю цифрами: любое решение подкрепляю данными',
+    'Проактивно оптимизирую кампании, не жду обратной связи',
+    'Чётко ориентируюсь на KPI и понимаю влияние работы на бизнес',
+  ],
+  management:[
+    'Ставлю команде чёткие задачи с приоритетами и критериями результата',
+    'Участвую в стратегическом планировании: цели → декомпозиция → задачи',
+    'Управляю бюджетами: планирую, согласую, контролирую',
+    'Регулярно оцениваю эффективность команды и даю развивающий фидбэк',
+    'Выстраиваю процессы и пишу регламенты, которые реально работают',
+    'Готовлю отчёты и презентации для стейкхолдеров',
+    'Мотивирую команду: знаю, что важно каждому',
+    'Принимаю решения в условиях неполной информации',
+    'Эффективно взаимодействую с другими отделами, разрешаю конфликты',
+  ]
+};
+
+// ─── SETTINGS ───
+const cfg = {
+  get gsUrl() { return localStorage.getItem('gs_url')||''; },
+  get ejsPublicKey() { return localStorage.getItem('ejs_public_key')||''; },
+  get ejsServiceId() { return localStorage.getItem('ejs_service_id')||''; },
+  get ejsTemplateId() { return localStorage.getItem('ejs_template_id')||''; },
+  get claudeKey() { return localStorage.getItem('claude_key')||''; },
+};
+
+// ─── STATE ───
+let currentUser = {};
+let currentRespondents = [];
+let editMode = false;
+let currentDetailId = null;
+
+// ─── SCREENS ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'admin-settings') populateSettings();
+}
+
+// ─── SETTINGS UI ───
+function populateSettings() {
+  document.getElementById('gs-url').value = cfg.gsUrl;
+  document.getElementById('ejs-public-key').value = cfg.ejsPublicKey;
+  document.getElementById('ejs-service-id').value = cfg.ejsServiceId;
+  document.getElementById('ejs-template-id').value = cfg.ejsTemplateId;
+  document.getElementById('claude-key').value = cfg.claudeKey;
+}
+function saveGSSettings() {
+  localStorage.setItem('gs_url', document.getElementById('gs-url').value.trim());
+  showToast('URL сохранён ✓');
+}
+function saveEmailJSSettings() {
+  localStorage.setItem('ejs_public_key', document.getElementById('ejs-public-key').value.trim());
+  localStorage.setItem('ejs_service_id', document.getElementById('ejs-service-id').value.trim());
+  localStorage.setItem('ejs_template_id', document.getElementById('ejs-template-id').value.trim());
+  showToast('EmailJS сохранён ✓');
+}
+function saveClaudeKey() {
+  localStorage.setItem('claude_key', document.getElementById('claude-key').value.trim());
+  showToast('API Key сохранён ✓');
+}
+function showGSInstructions() {
+  const el = document.getElementById('gs-instructions');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+async function testGSConnection() {
+  if (!cfg.gsUrl) { showToast('Сначала введи URL'); return; }
+  try {
+    const r = await gsGet();
+    showToast(r.status === 'ok' ? 'Подключение работает ✓' : 'Ответ получен, но статус: ' + JSON.stringify(r));
+  } catch(e) { showToast('Ошибка: ' + e.message); }
+}
+async function testEmail() {
+  if (!cfg.ejsPublicKey) { showToast('Заполни данные EmailJS'); return; }
+  try {
+    emailjs.init({ publicKey: cfg.ejsPublicKey });
+    await emailjs.send(cfg.ejsServiceId, cfg.ejsTemplateId, {
+      to_email: 'test@example.com', to_name: 'Тест', matrix_text: 'Тестовое письмо.'
+    });
+    showToast('Тестовое письмо отправлено ✓');
+  } catch(e) { showToast('Ошибка EmailJS: ' + (e.text||e.message)); }
+}
+
+// ─── GOOGLE SHEETS API ───
+async function gsPost(data) {
+  if (!cfg.gsUrl) throw new Error('Google Sheets URL не настроен. Зайди в ⚙ Настройки.');
+  const resp = await fetch(cfg.gsUrl, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+  return resp.json();
+}
+async function gsGet() {
+  if (!cfg.gsUrl) throw new Error('Google Sheets URL не настроен.');
+  const resp = await fetch(cfg.gsUrl + '?t=' + Date.now());
+  return resp.json();
+}
+
+// ─── SURVEY ───
+function initSurvey() {
+  currentUser = { name:'', email:'', months:'', role:null, softAnswers:{}, clusterAnswers:{}, openAnswers:{} };
+  ['inp-name','inp-email','inp-months','open-1','open-2','open-3'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  renderSoftQuestions();
+  renderRoleGrid();
+  goStep(1);
+}
+
+function renderSoftQuestions() {
+  document.getElementById('soft-questions').innerHTML = SOFT_QUESTIONS.map((q,i) => `
+    <div class="q-block">
+      <div class="q-text">${q}</div>
+      <div class="scale-row" id="soft-scale-${i}">
+        ${[1,2,3,4].map(v=>`<button class="scale-btn" onclick="selectScale('soft',${i},${v},this.parentElement)">${v}</button>`).join('')}
+      </div>
+      <div class="scale-hint"><span>Новичок</span><span>Эксперт</span></div>
+    </div>`).join('');
+}
+
+function renderRoleGrid() {
+  document.getElementById('role-grid').innerHTML = ROLES.map((r,i) => `
+    <div class="role-card" id="role-${i}" onclick="selectRole(${i})">
+      <div class="role-name">${r.name}</div>
+      <div class="role-cluster">${CLUSTER_LABELS[r.cluster]}</div>
+    </div>`).join('');
+}
+
+function selectRole(i) {
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('role-'+i).classList.add('selected');
+  currentUser.role = ROLES[i];
+}
+
+function selectScale(group, idx, val, container) {
+  container.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+  container.querySelectorAll('.scale-btn')[val-1].classList.add('selected');
+  if (group === 'soft') currentUser.softAnswers[idx] = val;
+  else currentUser.clusterAnswers[idx] = val;
+}
+
+function renderClusterQuestions() {
+  if (!currentUser.role) return;
+  const qs = CLUSTER_QUESTIONS[currentUser.role.cluster];
+  document.getElementById('cluster-title').textContent = CLUSTER_LABELS[currentUser.role.cluster] + ' — профессиональные компетенции';
+  document.getElementById('cluster-questions').innerHTML = qs.map((q,i) => `
+    <div class="q-block">
+      <div class="q-text">${q}</div>
+      <div class="scale-row" id="cluster-scale-${i}">
+        ${[1,2,3,4].map(v=>`<button class="scale-btn" onclick="selectScale('cluster',${i},${v},this.parentElement)">${v}</button>`).join('')}
+      </div>
+      <div class="scale-hint"><span>Новичок</span><span>Эксперт</span></div>
+    </div>`).join('');
+  Object.entries(currentUser.clusterAnswers).forEach(([idx,val]) => {
+    const row = document.getElementById('cluster-scale-'+idx);
+    if (row) row.querySelectorAll('.scale-btn')[val-1]?.classList.add('selected');
+  });
+}
+
+function goStep(n) {
+  if (n === 2) {
+    const name = document.getElementById('inp-name').value.trim();
+    if (!name) { showToast('Введи имя'); return; }
+    currentUser.name = name;
+    currentUser.email = document.getElementById('inp-email').value.trim();
+    currentUser.months = document.getElementById('inp-months').value;
+    currentUser.openAnswers[1] = document.getElementById('open-1').value;
+    currentUser.openAnswers[2] = document.getElementById('open-2').value;
+    currentUser.openAnswers[3] = document.getElementById('open-3').value;
+  }
+  if (n === 3) {
+    if (!currentUser.role) { showToast('Выбери роль'); return; }
+    renderClusterQuestions();
+  }
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-'+n).classList.add('active');
+  const labels = ['','Шаг 1 из 3','Шаг 2 из 3','Шаг 3 из 3'];
+  const widths = ['','33%','66%','100%'];
+  document.getElementById('survey-step-label').textContent = labels[n];
+  document.getElementById('progress-fill').style.width = widths[n];
+  window.scrollTo(0,0);
+}
+
+async function submitSurvey() {
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Сохраняем...';
+  const entry = {
+    action: 'submit',
+    id: Date.now(),
+    name: currentUser.name,
+    email: currentUser.email,
+    role: currentUser.role,
+    months: currentUser.months,
+    submittedAt: new Date().toLocaleDateString('ru-RU'),
+    softAnswers: {...currentUser.softAnswers},
+    clusterAnswers: {...currentUser.clusterAnswers},
+    openAnswers: {...currentUser.openAnswers},
+    status: 'new',
+    matrix: ''
+  };
+  try {
+    await gsPost(entry);
+    showScreen('done');
+  } catch(e) {
+    showToast('Ошибка сохранения: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Отправить результаты →';
+  }
+}
+
+// ─── ADMIN ───
+function adminLogin() {
+  if (document.getElementById('admin-pass').value === ADMIN_PASS) {
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('admin-pass').value = '';
+    showScreen('admin-panel');
+    loadAndRenderPanel();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+async function loadAndRenderPanel() {
+  showLoading('Загружаем данные из Google Sheets...');
+  try {
+    const data = await gsPost({ action: 'getAll' });
+    currentRespondents = Array.isArray(data) ? data.map(parseRow) : [];
+    renderAdminPanel();
+  } catch(e) {
+    currentRespondents = [];
+    showToast('Ошибка загрузки: ' + e.message);
+    renderAdminPanel();
+  } finally {
+    hideLoading();
+  }
+}
+
+function parseRow(r) {
+  const softAnswers = {}, clusterAnswers = {}, openAnswers = {};
+  for (let i = 0; i < 6; i++) softAnswers[i] = r['soft_'+i] || '';
+  for (let i = 0; i < 9; i++) clusterAnswers[i] = r['cluster_'+i] || '';
+  openAnswers[1] = r['open_1'] || '';
+  openAnswers[2] = r['open_2'] || '';
+  openAnswers[3] = r['open_3'] || '';
+  return {
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    role: { name: r.role, cluster: r.cluster },
+    months: r.months,
+    submittedAt: r.submittedAt,
+    status: r.status || 'new',
+    matrix: r.matrix || '',
+    softAnswers,
+    clusterAnswers,
+    openAnswers,
+  };
+}
+
+function renderAdminPanel() {
+  const total = currentRespondents.length;
+  const generated = currentRespondents.filter(r => r.status === 'generated' || r.status === 'sent').length;
+  const sent = currentRespondents.filter(r => r.status === 'sent').length;
+  const clusters = {};
+  currentRespondents.forEach(r => { const c = r.role?.cluster||'other'; clusters[c]=(clusters[c]||0)+1; });
+  const top = Object.entries(clusters).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Прошли опрос</div></div>
+    <div class="stat-card"><div class="stat-num">${generated}</div><div class="stat-label">Матрица сформирована</div></div>
+    <div class="stat-card"><div class="stat-num">${sent}</div><div class="stat-label">Отправлено сотрудникам</div></div>
+    <div class="stat-card"><div class="stat-num">${top ? CLUSTER_LABELS[top[0]]||top[0] : '—'}</div><div class="stat-label">Самый большой кластер</div></div>
+  `;
+  const statusLabels = {new:'Новый',generated:'Матрица готова',sent:'Отправлено'};
+  const statusClasses = {new:'status-new',generated:'status-generated',sent:'status-sent'};
+  const listEl = document.getElementById('resp-list');
+  if (!total) {
+    listEl.innerHTML = !cfg.gsUrl
+      ? '<div class="empty-state">Сначала настрой Google Sheets в ⚙ Настройках</div>'
+      : '<div class="empty-state">Пока никто не прошёл опрос</div>';
+    return;
+  }
+  listEl.innerHTML = [...currentRespondents].reverse().map(r => `
+    <div class="resp-card" onclick="openDetail('${r.id}')">
+      <div class="resp-avatar">${(r.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div class="resp-info">
+        <div class="resp-name">${r.name}</div>
+        <div class="resp-meta">${r.role?.name||'—'} · ${r.submittedAt||''}</div>
+      </div>
+      <span class="resp-status ${statusClasses[r.status]||'status-new'}">${statusLabels[r.status]||'Новый'}</span>
+      <span style="color:var(--text-3);font-size:16px">›</span>
+    </div>`).join('');
+}
+
+function openDetail(id) {
+  const r = currentRespondents.find(x => String(x.id) === String(id));
+  if (!r) return;
+  currentDetailId = id;
+  editMode = false;
+  showScreen('admin-detail');
+  renderDetail(r);
+}
+
+function renderDetail(r) {
+  const cluster = r.role?.cluster;
+  const qs = cluster ? CLUSTER_QUESTIONS[cluster] : [];
+  const softRows = SOFT_QUESTIONS.map((q,i) => {
+    const val = r.softAnswers[i];
+    const pct = val ? (val/4*100) : 0;
+    return `<div class="answer-row">
+      <div class="answer-q">${q}</div>
+      <div class="answer-val">${val||'—'}</div>
+      <div class="score-bar"><div class="score-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  const clusterRows = qs.map((q,i) => {
+    const val = r.clusterAnswers[i];
+    const pct = val ? (val/4*100) : 0;
+    return `<div class="answer-row">
+      <div class="answer-q">${q}</div>
+      <div class="answer-val">${val||'—'}</div>
+      <div class="score-bar"><div class="score-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  const openSection = [['Сильные стороны',r.openAnswers[1]],['Зоны роста',r.openAnswers[2]],['Хочет освоить',r.openAnswers[3]]]
+    .filter(([,v])=>v).map(([l,v])=>`<div style="font-size:13px;color:var(--text-2);margin-top:.5rem">${l}</div><div class="open-answer">${v}</div>`).join('');
+  const isSent = r.status === 'sent';
+  const hasMatrix = !!r.matrix;
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-name">${r.name}</div>
+    <div class="detail-role">${r.role?.name||'—'} · ${CLUSTER_LABELS[cluster]||''} · ${r.months||'?'} мес. в команде ${r.email ? '· '+r.email : ''}</div>
+    <div class="answers-section">
+      <div class="answers-section-title">Soft skills</div>${softRows}
+    </div>
+    <div class="answers-section">
+      <div class="answers-section-title">${CLUSTER_LABELS[cluster]||'Профессиональные'} компетенции</div>${clusterRows}
+    </div>
+    ${openSection ? `<div class="answers-section"><div class="answers-section-title">Открытые ответы</div>${openSection}</div>` : ''}
+    <div class="matrix-section">
+      <div class="answers-section-title">Матрица компетенций</div>
+      <div id="matrix-placeholder" class="matrix-placeholder" ${hasMatrix?'style="display:none"':''}>Нажми «Сгенерировать» — Claude проанализирует ответы и составит матрицу.</div>
+      <div class="matrix-text ${hasMatrix?'visible':''}" id="matrix-text">${r.matrix||''}</div>
+      <textarea class="matrix-edit" id="matrix-edit">${r.matrix||''}</textarea>
+    </div>
+    <div class="action-bar">
+      <div class="generating" id="gen-indicator"><div class="dot-pulse"><span></span><span></span><span></span></div> Claude генерирует матрицу...</div>
+      <div class="sent-badge ${isSent?'visible':''}" id="sent-badge">✓ Отправлено на почту</div>
+      <button class="btn btn-primary" id="btn-generate" onclick="generateMatrix('${r.id}')" ${hasMatrix?'style="display:none"':''}>✦ Сгенерировать матрицу</button>
+      <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>Скопировать текст</button>
+      <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>Редактировать</button>
+      <button class="btn" id="btn-save-edit" onclick="saveEdit('${r.id}')" style="display:none">Сохранить правки</button>
+      <button class="btn btn-primary ml-auto" id="btn-send" onclick="sendEmail('${r.id}')" ${!hasMatrix||isSent?'style="display:none"':''}>Отправить на почту →</button>
+    </div>
+  `;
+}
+
+async function generateMatrix(id) {
+  if (!cfg.gsUrl) { showToast('Добавь URL Google Apps Script в ⚙ Настройках'); return; }
+  const r = currentRespondents.find(x => String(x.id) === String(id));
+  if (!r) return;
+  document.getElementById('btn-generate').style.display = 'none';
+  document.getElementById('gen-indicator').classList.add('visible');
+  const cluster = r.role?.cluster;
+  const qs = cluster ? CLUSTER_QUESTIONS[cluster] : [];
+  const softLines = SOFT_QUESTIONS.map((q,i) => `- ${q}: ${r.softAnswers[i]||'нет'}/4`).join('\n');
+  const clusterLines = qs.map((q,i) => `- ${q}: ${r.clusterAnswers[i]||'нет'}/4`).join('\n');
+  const prompt = `Ты HR-аналитик. Составь матрицу компетенций на основе самооценки.
+
+Сотрудник: ${r.name} | Должность: ${r.role?.name} | Кластер: ${CLUSTER_LABELS[cluster]} | Стаж: ${r.months} мес.
+
+SOFT SKILLS:\n${softLines}
+
+ПРОФЕССИОНАЛЬНЫЕ КОМПЕТЕНЦИИ:\n${clusterLines}
+
+ОТКРЫТЫЕ ОТВЕТЫ:
+- Сильные стороны: ${r.openAnswers[1]||'—'}
+- Зоны роста: ${r.openAnswers[2]||'—'}
+- Хочет освоить: ${r.openAnswers[3]||'—'}
+
+Формат ответа:
+1. ОБЩИЙ УРОВЕНЬ — одно предложение
+2. СИЛЬНЫЕ СТОРОНЫ — 3–4 навыка с пояснением
+3. ЗОНЫ РОСТА — 3–4 навыка
+4. РЕКОМЕНДУЕМЫЙ ГРЕЙД — Junior/Middle/Senior/Lead + обоснование
+5. ПЛАН РАЗВИТИЯ — 3 конкретных шага на 3–6 месяцев
+
+По-русски, лаконично, без воды.`;
+  try {
+    const data = await gsPost({ action: 'generateMatrix', prompt });
+    if (data.error) throw new Error(data.error);
+    const text = data.text;
+    await gsPost({ action: 'update', id, matrix: text, status: 'generated' });
+    const idx = currentRespondents.findIndex(x => String(x.id) === String(id));
+    currentRespondents[idx].matrix = text;
+    currentRespondents[idx].status = 'generated';
+    document.getElementById('gen-indicator').classList.remove('visible');
+    document.getElementById('matrix-placeholder').style.display = 'none';
+    document.getElementById('matrix-text').textContent = text;
+    document.getElementById('matrix-text').classList.add('visible');
+    document.getElementById('matrix-edit').value = text;
+    document.getElementById('btn-edit').style.display = '';
+    document.getElementById('btn-copy').style.display = '';
+    document.getElementById('btn-send').style.display = '';
+  } catch(e) {
+    document.getElementById('gen-indicator').classList.remove('visible');
+    document.getElementById('btn-generate').style.display = '';
+    showToast('Ошибка: ' + e.message);
+  }
+}
+
+function toggleEdit() {
+  editMode = !editMode;
+  document.getElementById('matrix-text').classList.toggle('visible', !editMode);
+  document.getElementById('matrix-edit').classList.toggle('visible', editMode);
+  document.getElementById('btn-edit').textContent = editMode ? 'Отмена' : 'Редактировать';
+  document.getElementById('btn-save-edit').style.display = editMode ? '' : 'none';
+}
+
+async function saveEdit(id) {
+  const text = document.getElementById('matrix-edit').value;
+  await gsPost({ action:'update', id, matrix:text });
+  const idx = currentRespondents.findIndex(x => String(x.id) === String(id));
+  currentRespondents[idx].matrix = text;
+  document.getElementById('matrix-text').textContent = text;
+  toggleEdit();
+  showToast('Сохранено ✓');
+}
+
+function copyMatrix() {
+  const text = document.getElementById('matrix-text').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('Скопировано в буфер ✓'));
+}
+
+async function sendEmail(id) {
+  if (!cfg.ejsPublicKey || !cfg.ejsServiceId || !cfg.ejsTemplateId) {
+    showToast('Настрой EmailJS в ⚙ Настройках'); return;
+  }
+  const r = currentRespondents.find(x => String(x.id) === String(id));
+  if (!r?.email) { showToast('У сотрудника нет email'); return; }
+  const btn = document.getElementById('btn-send');
+  btn.textContent = 'Отправляю...';
+  btn.disabled = true;
+  try {
+    emailjs.init({ publicKey: cfg.ejsPublicKey });
+    await emailjs.send(cfg.ejsServiceId, cfg.ejsTemplateId, {
+      to_email: r.email, to_name: r.name, matrix_text: r.matrix
+    });
+    await gsPost({ action:'update', id, status:'sent' });
+    const idx = currentRespondents.findIndex(x => String(x.id) === String(id));
+    currentRespondents[idx].status = 'sent';
+    btn.style.display = 'none';
+    document.getElementById('sent-badge').classList.add('visible');
+    showToast('Письмо отправлено на ' + r.email + ' ✓');
+  } catch(e) {
+    btn.textContent = 'Отправить на почту →';
+    btn.disabled = false;
+    showToast('Ошибка: ' + (e.text||e.message));
+  }
+}
+
+// ─── LOADING / TOAST ───
+function showLoading(msg) {
+  document.getElementById('loading-text').textContent = msg||'Загрузка...';
+  document.getElementById('loading-overlay').classList.add('visible');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('visible');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
