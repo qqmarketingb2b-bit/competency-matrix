@@ -300,7 +300,8 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
   <div class="admin-header">
     <span class="admin-logo">Матрица</span>
     <span class="admin-badge">Администратор</span>
-    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-left:auto;margin-right:4px">⚙ Настройки</button>
+    <button class="btn btn-ghost btn-sm" onclick="openQuestionEditor()" style="margin-left:auto;margin-right:4px">✎ Вопросы</button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-right:4px">⚙ Настройки</button>
     <button class="btn btn-ghost btn-sm" onclick="showScreen('home');document.getElementById('access-code').value=''">Выйти</button>
   </div>
   <div class="admin-body">
@@ -473,6 +474,70 @@ function ok(data) {
   </div>
 </div>
 
+
+<!-- QUESTION EDITOR -->
+<div id="admin-questions" class="screen">
+  <div class="admin-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
+    <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Редактор вопросов</span>
+    <span class="admin-badge" style="margin-left:8px">Администратор</span>
+    <button class="btn btn-sm btn-primary" onclick="showAddQuestionForm()" style="margin-left:auto">+ Добавить вопрос</button>
+  </div>
+  <div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
+
+    <!-- Фильтр по кластеру -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem" id="q-cluster-tabs">
+      <button class="btn btn-sm" onclick="filterQCluster('all')" id="qtab-all" style="background:var(--accent-light);color:var(--accent);border-color:transparent">Все</button>
+      <button class="btn btn-sm" onclick="filterQCluster('smm')" id="qtab-smm">SMM</button>
+      <button class="btn btn-sm" onclick="filterQCluster('pr')" id="qtab-pr">PR</button>
+      <button class="btn btn-sm" onclick="filterQCluster('content')" id="qtab-content">Content</button>
+      <button class="btn btn-sm" onclick="filterQCluster('performance')" id="qtab-performance">Performance</button>
+      <button class="btn btn-sm" onclick="filterQCluster('management')" id="qtab-management">Management</button>
+    </div>
+
+    <!-- Форма добавления/редактирования -->
+    <div id="q-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:500;margin-bottom:1rem" id="q-form-title">Новый вопрос</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Кластер</label>
+          <select class="field-input" id="q-form-cluster">
+            <option value="smm">SMM</option>
+            <option value="pr">PR</option>
+            <option value="content">Content</option>
+            <option value="performance">Performance</option>
+            <option value="management">Management</option>
+          </select>
+        </div>
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Тип</label>
+          <select class="field-input" id="q-form-type">
+            <option value="С">Ситуационный (С)</option>
+            <option value="П">Проверочный (П)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:12px">
+        <label class="field-label">Компетенция</label>
+        <input class="field-input" id="q-form-comp" placeholder="Например: Аналитика">
+      </div>
+      <div class="field-group" style="margin-bottom:1rem">
+        <label class="field-label">Текст вопроса</label>
+        <textarea class="field-input" id="q-form-text" rows="3" style="resize:vertical" placeholder="Как ты обычно..."></textarea>
+      </div>
+      <input type="hidden" id="q-form-id">
+      <input type="hidden" id="q-form-row">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="saveQuestion()">Сохранить</button>
+        <button class="btn" onclick="document.getElementById('q-form').style.display='none'">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Список вопросов -->
+    <div id="q-list"><div class="empty-state">Загрузка...</div></div>
+  </div>
+</div>
+
 <!-- LOADING -->
 <div class="loading-overlay" id="loading-overlay">
   <div class="dot-pulse"><span></span><span></span><span></span></div>
@@ -611,7 +676,7 @@ const CLUSTER_QUESTIONS = {
 
 // ─── SETTINGS ───
 const cfg = {
-  get gsUrl() { return localStorage.getItem('gs_url')||''; },
+  get gsUrl() { return localStorage.getItem('gs_url')||'https://script.google.com/macros/s/AKfycbxgShA3o9qggzbQn_-03xEtvN4kdhNd0k0rX_XQ1vq8kDE9E7mj66KZ7i77t-CHbIr7/exec'; },
   get ejsPublicKey() { return localStorage.getItem('ejs_public_key')||''; },
   get ejsServiceId() { return localStorage.getItem('ejs_service_id')||''; },
   get ejsTemplateId() { return localStorage.getItem('ejs_template_id')||''; },
@@ -691,7 +756,7 @@ async function gsGet() {
 }
 
 // ─── SURVEY ───
-function initSurvey() {
+async function initSurvey() {
   currentUser = { name:'', email:'', months:'', role:null, softAnswers:{}, clusterAnswers:{}, openAnswers:{} };
   ['inp-name','inp-email','inp-months','open-1','open-2','open-3'].forEach(id => {
     document.getElementById(id).value = '';
@@ -699,6 +764,26 @@ function initSurvey() {
   renderSoftQuestions();
   renderRoleGrid();
   goStep(1);
+  // Load questions from Sheets in background
+  try {
+    const data = await gsPost({ action: 'getQuestions' });
+    if (Array.isArray(data) && data.length > 0) {
+      // Convert to CLUSTER_QUESTIONS format
+      const newCQ = {smm:[],pr:[],content:[],performance:[],management:[]};
+      data.forEach(q => {
+        if (newCQ[q.cluster]) {
+          newCQ[q.cluster].push({ type: q.type, comp: q.comp, text: q.text, id: q.id });
+        }
+      });
+      // Only replace if we got valid data
+      Object.keys(newCQ).forEach(k => {
+        if (newCQ[k].length > 0) CLUSTER_QUESTIONS[k] = newCQ[k];
+      });
+    }
+  } catch(e) {
+    // Fall back to hardcoded questions silently
+    console.log('Using hardcoded questions:', e.message);
+  }
 }
 
 function renderSoftQuestions() {
@@ -1144,6 +1229,159 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── QUESTION EDITOR ───
+let allQuestions = [];
+let currentQCluster = 'all';
+
+async function openQuestionEditor() {
+  showScreen('admin-questions');
+  showLoading('Загружаем вопросы...');
+  try {
+    const data = await gsPost({ action: 'getQuestions' });
+    allQuestions = Array.isArray(data) ? data : [];
+    renderQuestionList();
+  } catch(e) {
+    showToast('Ошибка загрузки вопросов: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function filterQCluster(cluster) {
+  currentQCluster = cluster;
+  document.querySelectorAll('[id^="qtab-"]').forEach(btn => {
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  });
+  const active = document.getElementById('qtab-' + cluster);
+  if (active) {
+    active.style.background = 'linear-gradient(135deg,#9521FE,#6976F6)';
+    active.style.color = '#fff';
+    active.style.borderColor = 'transparent';
+  }
+  renderQuestionList();
+}
+
+function renderQuestionList() {
+  const filtered = currentQCluster === 'all'
+    ? allQuestions
+    : allQuestions.filter(q => q.cluster === currentQCluster);
+
+  const CLUSTER_LABELS = {smm:'SMM',pr:'PR',content:'Content',performance:'Performance',management:'Management'};
+
+  if (!filtered.length) {
+    document.getElementById('q-list').innerHTML = '<div class="empty-state">Вопросов нет</div>';
+    return;
+  }
+
+  // Group by cluster then comp
+  let lastCluster = '', lastComp = '';
+  let html = '';
+  filtered.forEach((q, i) => {
+    if (q.cluster !== lastCluster) {
+      if (lastCluster) html += '</div>';
+      lastCluster = q.cluster;
+      lastComp = '';
+      if (currentQCluster === 'all') {
+        html += `<div style="font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#9521FE;margin:1.5rem 0 .75rem">${CLUSTER_LABELS[q.cluster]||q.cluster}</div>`;
+      }
+      html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">';
+    }
+    if (q.comp !== lastComp) {
+      lastComp = q.comp;
+      html += `<div style="background:var(--bg);padding:8px 1.25rem;font-size:12px;font-weight:600;color:var(--text-2);border-bottom:1px solid var(--border)">${q.comp}</div>`;
+    }
+    const badge = q.type === 'С'
+      ? `<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#FDF0E8;color:#8B4513;flex-shrink:0">С</span>`
+      : `<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#EEF3FA;color:#1D4E89;flex-shrink:0">П</span>`;
+    html += `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--border)">
+      ${badge}
+      <div style="flex:1;font-size:13px;color:var(--text);line-height:1.6">${q.text}</div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm" onclick="editQuestion(${i})" style="padding:5px 10px;font-size:12px">✎</button>
+        <button class="btn btn-sm" onclick="deleteQuestion('${q.id}',${i})" style="padding:5px 10px;font-size:12px;color:var(--danger);border-color:var(--danger)">✕</button>
+      </div>
+    </div>`;
+  });
+  if (lastCluster) html += '</div>';
+  document.getElementById('q-list').innerHTML = html;
+}
+
+function showAddQuestionForm() {
+  document.getElementById('q-form-title').textContent = 'Новый вопрос';
+  document.getElementById('q-form-cluster').value = currentQCluster === 'all' ? 'smm' : currentQCluster;
+  document.getElementById('q-form-type').value = 'С';
+  document.getElementById('q-form-comp').value = '';
+  document.getElementById('q-form-text').value = '';
+  document.getElementById('q-form-id').value = '';
+  document.getElementById('q-form-row').value = '';
+  document.getElementById('q-form').style.display = 'block';
+  document.getElementById('q-form').scrollIntoView({behavior:'smooth'});
+}
+
+function editQuestion(idx) {
+  const filtered = currentQCluster === 'all'
+    ? allQuestions
+    : allQuestions.filter(q => q.cluster === currentQCluster);
+  const q = filtered[idx];
+  const realIdx = allQuestions.indexOf(q);
+  document.getElementById('q-form-title').textContent = 'Редактировать вопрос';
+  document.getElementById('q-form-cluster').value = q.cluster;
+  document.getElementById('q-form-type').value = q.type;
+  document.getElementById('q-form-comp').value = q.comp;
+  document.getElementById('q-form-text').value = q.text;
+  document.getElementById('q-form-id').value = q.id;
+  document.getElementById('q-form-row').value = realIdx + 1; // +1 for header row
+  document.getElementById('q-form').style.display = 'block';
+  document.getElementById('q-form').scrollIntoView({behavior:'smooth'});
+}
+
+async function saveQuestion() {
+  const cluster = document.getElementById('q-form-cluster').value;
+  const type = document.getElementById('q-form-type').value;
+  const comp = document.getElementById('q-form-comp').value.trim();
+  const text = document.getElementById('q-form-text').value.trim();
+  const id = document.getElementById('q-form-id').value;
+  const rowIndex = document.getElementById('q-form-row').value;
+
+  if (!comp || !text) { showToast('Заполни компетенцию и текст вопроса'); return; }
+
+  showLoading('Сохраняем...');
+  try {
+    await gsPost({
+      action: 'saveQuestion',
+      question: { cluster, type, comp, text, id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
+    });
+    document.getElementById('q-form').style.display = 'none';
+    // Reload questions
+    const data = await gsPost({ action: 'getQuestions' });
+    allQuestions = Array.isArray(data) ? data : [];
+    renderQuestionList();
+    showToast('Вопрос сохранён ✓');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function deleteQuestion(qId, idx) {
+  if (!confirm('Удалить этот вопрос?')) return;
+  showLoading('Удаляем...');
+  try {
+    await gsPost({ action: 'deleteQuestion', questionId: qId });
+    const data = await gsPost({ action: 'getQuestions' });
+    allQuestions = Array.isArray(data) ? data : [];
+    renderQuestionList();
+    showToast('Вопрос удалён');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
+  }
 }
 </script>
 </body>
