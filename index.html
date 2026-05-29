@@ -300,7 +300,8 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
   <div class="admin-header">
     <span class="admin-logo">Матрица</span>
     <span class="admin-badge">Администратор</span>
-    <button class="btn btn-ghost btn-sm" onclick="openQuestionEditor()" style="margin-left:auto;margin-right:4px">✎ Вопросы</button>
+    <button class="btn btn-ghost btn-sm" onclick="openStructureEditor()" style="margin-left:auto;margin-right:4px">⊞ Структура</button>
+    <button class="btn btn-ghost btn-sm" onclick="openQuestionEditor()" style="margin-right:4px">✎ Вопросы</button>
     <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-right:4px">⚙ Настройки</button>
     <button class="btn btn-ghost btn-sm" onclick="showScreen('home');document.getElementById('access-code').value=''">Выйти</button>
   </div>
@@ -474,6 +475,66 @@ function ok(data) {
   </div>
 </div>
 
+
+
+<!-- STRUCTURE EDITOR -->
+<div id="admin-structure" class="screen">
+  <div class="admin-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
+    <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Структура опроса</span>
+    <span class="admin-badge" style="margin-left:8px">Администратор</span>
+    <button class="btn btn-sm btn-primary" onclick="showNewClusterForm()" style="margin-left:auto">+ Новый кластер</button>
+  </div>
+  <div style="max-width:900px;margin:0 auto;padding:2rem 1.5rem">
+
+    <!-- Форма нового кластера -->
+    <div id="new-cluster-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
+      <div style="font-size:15px;font-weight:500;margin-bottom:1.25rem">Новый кластер</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Название кластера</label>
+          <input class="field-input" id="nc-name" placeholder="Например: Design">
+        </div>
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Описание (1 строка)</label>
+          <input class="field-input" id="nc-desc" placeholder="Например: Визуал, брендинг, UI">
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:12px">
+        <label class="field-label">Должности (через запятую)</label>
+        <input class="field-input" id="nc-roles" placeholder="Например: Art Director, Designer, Motion Designer">
+      </div>
+      <div class="field-group" style="margin-bottom:1rem">
+        <label class="field-label">Контекст для генерации вопросов (необязательно)</label>
+        <textarea class="field-input" id="nc-context" rows="2" style="resize:vertical" placeholder="Опиши чем занимается этот кластер в контексте B2B iGaming..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="createClusterAndGenerate()">Создать и сгенерировать вопросы ✦</button>
+        <button class="btn" onclick="document.getElementById('new-cluster-form').style.display='none'">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Список кластеров -->
+    <div id="structure-list"></div>
+  </div>
+</div>
+
+<!-- QUESTION REVIEW (generated questions) -->
+<div id="question-review" class="screen">
+  <div class="admin-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-structure');renderStructureList()">← Назад к структуре</button>
+    <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px" id="review-title">Ревью вопросов</span>
+    <span class="admin-badge" style="margin-left:8px">Администратор</span>
+  </div>
+  <div style="max-width:900px;margin:0 auto;padding:2rem 1.5rem">
+    <div id="review-intro" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem;font-size:14px;color:var(--text-2);line-height:1.7"></div>
+    <div id="review-list"></div>
+    <div id="review-actions" style="display:flex;gap:10px;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" onclick="approveAllQuestions()">Апрувнуть все и сохранить →</button>
+      <button class="btn" onclick="regenerateAllQuestions()">↻ Перегенерировать все</button>
+    </div>
+  </div>
+</div>
 
 <!-- QUESTION EDITOR -->
 <div id="admin-questions" class="screen">
@@ -798,7 +859,9 @@ function renderSoftQuestions() {
 }
 
 function renderRoleGrid() {
-  document.getElementById('role-grid').innerHTML = CLUSTERS.map((c,i) => `
+  const clusters = (typeof currentStructure !== 'undefined' && currentStructure.length > 0)
+    ? currentStructure : CLUSTERS;
+  document.getElementById('role-grid').innerHTML = clusters.map((c,i) => `
     <div class="role-card" id="cluster-card-${i}" onclick="selectCluster(${i})" style="padding:1.25rem 1.5rem">
       <div class="role-name" style="font-size:16px;font-weight:600">${c.name}</div>
       <div class="role-cluster" style="font-size:13px;margin-top:4px">${c.desc}</div>
@@ -1235,8 +1298,11 @@ function showToast(msg) {
 let allQuestions = [];
 let currentQCluster = 'all';
 
-async function openQuestionEditor() {
+async function openQuestionEditor(filterCluster) {
   showScreen('admin-questions');
+  if (filterCluster) {
+    currentQCluster = filterCluster;
+  }
   showLoading('Загружаем вопросы...');
   try {
     const data = await gsPost({ action: 'getQuestions' });
@@ -1381,6 +1447,290 @@ async function deleteQuestion(qId, idx) {
     showToast('Ошибка: ' + e.message);
   } finally {
     hideLoading();
+  }
+}
+
+// ─── STRUCTURE EDITOR ───
+let currentStructure = []; // {cluster, name, desc, roles:[]}
+let reviewCluster = null;  // cluster being reviewed
+let reviewQuestions = [];  // [{type, comp, text, approved, comment}]
+
+async function openStructureEditor() {
+  showScreen('admin-structure');
+  showLoading('Загружаем структуру...');
+  try {
+    // Load clusters from CLUSTERS constant + any custom ones from Sheets
+    const data = await gsPost({ action: 'getStructure' });
+    currentStructure = Array.isArray(data) && data.length > 0 ? data : getDefaultStructure();
+  } catch(e) {
+    currentStructure = getDefaultStructure();
+  } finally {
+    hideLoading();
+    renderStructureList();
+  }
+}
+
+function getDefaultStructure() {
+  return CLUSTERS.map(c => ({
+    cluster: c.cluster,
+    name: c.name,
+    desc: c.desc,
+    roles: c.roles
+  }));
+}
+
+function renderStructureList() {
+  const el = document.getElementById('structure-list');
+  if (!currentStructure.length) {
+    el.innerHTML = '<div class="empty-state">Нет кластеров</div>';
+    return;
+  }
+  el.innerHTML = currentStructure.map((c, i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:500">${c.name}</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:2px">${c.desc}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" onclick="openQuestionEditor('${c.cluster}')" style="font-size:12px">✎ Вопросы</button>
+          <button class="btn btn-sm" onclick="generateQuestionsForCluster('${c.cluster}','${c.name}','${c.desc}')" style="font-size:12px;background:var(--accent-light);color:var(--accent);border-color:transparent">✦ Сгенерировать</button>
+          ${!['smm','pr','content','performance','management'].includes(c.cluster) ? `<button class="btn btn-sm" onclick="deleteCluster('${c.cluster}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">✕</button>` : ''}
+        </div>
+      </div>
+      <div style="padding:.875rem 1.25rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px">Должности</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="roles-${c.cluster}">
+          ${c.roles.map((r,j) => `
+            <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 10px">
+              <span style="font-size:13px">${r}</span>
+              <button onclick="deleteRole('${c.cluster}',${j})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px;line-height:1;padding:0 2px">×</button>
+            </div>`).join('')}
+          <button onclick="addRole('${c.cluster}')" style="background:none;border:1px dashed var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-2);cursor:pointer">+ добавить</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showNewClusterForm() {
+  document.getElementById('nc-name').value = '';
+  document.getElementById('nc-desc').value = '';
+  document.getElementById('nc-roles').value = '';
+  document.getElementById('nc-context').value = '';
+  document.getElementById('new-cluster-form').style.display = 'block';
+  document.getElementById('new-cluster-form').scrollIntoView({behavior:'smooth'});
+}
+
+async function createClusterAndGenerate() {
+  const name = document.getElementById('nc-name').value.trim();
+  const desc = document.getElementById('nc-desc').value.trim();
+  const rolesRaw = document.getElementById('nc-roles').value.trim();
+  const context = document.getElementById('nc-context').value.trim();
+  if (!name || !rolesRaw) { showToast('Заполни название и должности'); return; }
+  const roles = rolesRaw.split(',').map(r => r.trim()).filter(Boolean);
+  const cluster = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const newC = { cluster, name, desc: desc || name, roles };
+  currentStructure.push(newC);
+  document.getElementById('new-cluster-form').style.display = 'none';
+  // Save structure
+  await saveStructure();
+  renderStructureList();
+  // Generate questions
+  await generateQuestionsForCluster(cluster, name, desc || name, context);
+}
+
+async function generateQuestionsForCluster(cluster, name, desc, context) {
+  if (!cfg.gsUrl) { showToast('Настрой Google Sheets в ⚙ Настройках'); return; }
+  reviewCluster = cluster;
+  reviewQuestions = [];
+  showScreen('question-review');
+  document.getElementById('review-title').textContent = `Вопросы — ${name}`;
+  document.getElementById('review-intro').innerHTML = `Claude генерирует вопросы для кластера <strong>${name}</strong>. Подожди несколько секунд...`;
+  document.getElementById('review-list').innerHTML = '<div class="empty-state"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Генерируем вопросы...</div>';
+  document.getElementById('review-actions').style.display = 'none';
+
+  const prompt = `Ты руководитель отдела маркетинга в B2B iGaming компании. Сгенерируй профессиональные вопросы для самооценки сотрудников кластера "${name}".
+
+Описание кластера: ${desc}
+${context ? 'Дополнительный контекст: ' + context : ''}
+
+Сгенерируй 8-10 пар вопросов (ситуационный + проверочный) сгруппированных по компетенциям. Каждая пара — одна компетенция.
+
+Ситуационный вопрос (С) — «Как ты обычно действуешь когда...» или «Опиши как ты...»
+Проверочный вопрос (П) — «Какими инструментами...» или «На что обращаешь внимание...»
+
+Формат ответа — строго JSON массив:
+[
+  {"comp": "Название компетенции", "type": "С", "text": "Текст вопроса"},
+  {"comp": "Название компетенции", "type": "П", "text": "Текст вопроса"},
+  ...
+]
+
+Только JSON, без пояснений, без markdown. Контекст B2B iGaming должен прослеживаться в вопросах где уместно.`;
+
+  try {
+    const data = await gsPost({ action: 'generateMatrix', prompt });
+    if (data.error) throw new Error(data.error);
+    let parsed;
+    try {
+      const clean = data.text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      throw new Error('Не удалось разобрать ответ Claude. Попробуй ещё раз.');
+    }
+    reviewQuestions = parsed.map(q => ({ ...q, cluster, approved: false, comment: '' }));
+    renderReviewList();
+    document.getElementById('review-intro').innerHTML = `Сгенерировано <strong>${reviewQuestions.length} вопросов</strong> для кластера <strong>${name}</strong>. Проверь каждый — апрувни, отредактируй или перегенерируй с комментарием.`;
+    document.getElementById('review-actions').style.display = 'flex';
+  } catch(e) {
+    document.getElementById('review-list').innerHTML = `<div class="empty-state" style="color:var(--danger)">Ошибка: ${e.message}</div>`;
+    document.getElementById('review-intro').textContent = 'Не удалось сгенерировать вопросы.';
+  }
+}
+
+function renderReviewList() {
+  const el = document.getElementById('review-list');
+  let lastComp = '';
+  el.innerHTML = reviewQuestions.map((q, i) => {
+    let compHeader = '';
+    if (q.comp !== lastComp) {
+      lastComp = q.comp;
+      compHeader = `<div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin:${i===0?'0':'1.25rem'} 0 .5rem">${q.comp}</div>`;
+    }
+    const badge = q.type === 'С'
+      ? `<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#FDF0E8;color:#8B4513;flex-shrink:0">С</span>`
+      : `<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#EEF3FA;color:#1D4E89;flex-shrink:0">П</span>`;
+    const approvedStyle = q.approved ? 'border-color:#4A8C60;background:#EAF2EC' : '';
+    return `${compHeader}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.25rem;margin-bottom:8px;${approvedStyle}" id="review-item-${i}">
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+        ${badge}
+        <textarea id="rq-text-${i}" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Onest',sans-serif;font-size:13px;line-height:1.6;resize:vertical;min-height:52px;background:var(--bg);outline:none" onfocus="this.style.borderColor='#9521FE'" onblur="this.style.borderColor=''">${q.text}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="rq-comment-${i}" type="text" placeholder="Комментарий для перегенерации..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg);outline:none;font-family:'Onest',sans-serif" onfocus="this.style.borderColor='#9521FE'" onblur="this.style.borderColor=''">
+        <button class="btn btn-sm" onclick="regenerateSingleQuestion(${i})" style="font-size:12px;flex-shrink:0">↻ Перегенерировать</button>
+        <button class="btn btn-sm" onclick="toggleApprove(${i})" id="approve-btn-${i}" style="font-size:12px;flex-shrink:0;${q.approved?'background:#4A8C60;color:#fff;border-color:#4A8C60':''}">
+          ${q.approved ? '✓ Апрувнут' : 'Апрувнуть'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleApprove(i) {
+  reviewQuestions[i].text = document.getElementById('rq-text-'+i).value;
+  reviewQuestions[i].approved = !reviewQuestions[i].approved;
+  renderReviewList();
+}
+
+async function regenerateSingleQuestion(i) {
+  const comment = document.getElementById('rq-comment-'+i).value.trim();
+  const q = reviewQuestions[i];
+  const btn = document.getElementById('approve-btn-'+i);
+
+  const prompt = `Перегенерируй один вопрос для самооценки сотрудника B2B iGaming маркетинг команды.
+
+Кластер: ${reviewCluster}
+Компетенция: ${q.comp}
+Тип вопроса: ${q.type === 'С' ? 'Ситуационный (как обычно действуешь)' : 'Проверочный (какие инструменты/подходы используешь)'}
+Текущий вопрос: ${q.text}
+${comment ? 'Комментарий что не так: ' + comment : ''}
+
+Ответь только новым текстом вопроса, без пояснений.`;
+
+  document.getElementById('rq-text-'+i).value = 'Генерирую...';
+  try {
+    const data = await gsPost({ action: 'generateMatrix', prompt });
+    if (data.error) throw new Error(data.error);
+    reviewQuestions[i].text = data.text.trim();
+    reviewQuestions[i].comment = '';
+    renderReviewList();
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+    renderReviewList();
+  }
+}
+
+async function regenerateAllQuestions() {
+  const cluster = reviewCluster;
+  const c = currentStructure.find(s => s.cluster === cluster);
+  if (!c) return;
+  await generateQuestionsForCluster(cluster, c.name, c.desc);
+}
+
+async function approveAllQuestions() {
+  // Save text edits first
+  reviewQuestions.forEach((q, i) => {
+    q.text = document.getElementById('rq-text-'+i)?.value || q.text;
+    q.approved = true;
+  });
+
+  showLoading('Сохраняем вопросы...');
+  try {
+    // Delete existing questions for this cluster
+    await gsPost({ action: 'deleteClusterQuestions', cluster: reviewCluster });
+    // Save all new questions
+    for (const q of reviewQuestions) {
+      await gsPost({
+        action: 'saveQuestion',
+        question: { cluster: reviewCluster, type: q.type, comp: q.comp, text: q.text }
+      });
+    }
+    // Update local CLUSTER_QUESTIONS
+    CLUSTER_QUESTIONS[reviewCluster] = reviewQuestions.map(q => ({
+      type: q.type, comp: q.comp, text: q.text
+    }));
+    showToast('Вопросы сохранены ✓');
+    showScreen('admin-structure');
+    renderStructureList();
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function addRole(cluster) {
+  const name = prompt('Введи название должности:');
+  if (!name?.trim()) return;
+  const c = currentStructure.find(s => s.cluster === cluster);
+  if (c) {
+    c.roles.push(name.trim());
+    saveStructure();
+    renderStructureList();
+    // Update CLUSTERS
+    const cl = CLUSTERS.find(cl => cl.cluster === cluster);
+    if (cl) cl.roles = c.roles;
+  }
+}
+
+function deleteRole(cluster, idx) {
+  const c = currentStructure.find(s => s.cluster === cluster);
+  if (c) {
+    c.roles.splice(idx, 1);
+    saveStructure();
+    renderStructureList();
+    const cl = CLUSTERS.find(cl => cl.cluster === cluster);
+    if (cl) cl.roles = c.roles;
+  }
+}
+
+async function deleteCluster(cluster) {
+  if (!confirm('Удалить этот кластер и все его вопросы?')) return;
+  currentStructure = currentStructure.filter(c => c.cluster !== cluster);
+  await saveStructure();
+  await gsPost({ action: 'deleteClusterQuestions', cluster });
+  renderStructureList();
+  showToast('Кластер удалён');
+}
+
+async function saveStructure() {
+  try {
+    await gsPost({ action: 'saveStructure', structure: currentStructure });
+  } catch(e) {
+    console.log('Structure save error:', e.message);
   }
 }
 </script>
