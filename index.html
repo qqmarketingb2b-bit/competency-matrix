@@ -169,6 +169,12 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 .loading-text { font-size: 14px; color: var(--text-2); }
 
 /* TOAST */
+
+/* LANG SWITCHER */
+.lang-switcher { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+.lang-btn { font-family: 'Onest', sans-serif; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 5px; border: none; background: transparent; color: var(--text-2); cursor: pointer; transition: all .15s; letter-spacing: .05em; }
+.lang-btn.active { background: linear-gradient(135deg, #9521FE, #6976F6); color: #fff; }
+
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--text); color: #fff; font-size: 13px; padding: 10px 20px; border-radius: var(--radius-sm); opacity: 0; transition: all .3s; pointer-events: none; z-index: 100; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-3); font-size: 14px; }
@@ -180,14 +186,20 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <div id="home" class="screen active">
   <div class="home-card">
     <div class="home-logo" style="background:linear-gradient(135deg,#9521FE,#6976F6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">B2B | Marketing Team</div>
-    <h1 class="home-title">Матрица<br>компетенций</h1>
-    <p class="home-sub">Введи код доступа чтобы продолжить.</p>
+    <h1 class="home-title" id="home-title">Матрица<br>компетенций</h1>
+    <p class="home-sub" id="home-subtitle">Введи код доступа чтобы продолжить.</p>
     <div class="field-group" style="text-align:left">
-      <label class="field-label">Код доступа</label>
+      <label class="field-label" id="access-label">Код доступа</label>
       <input class="field-input" id="access-code" type="password" placeholder="Введи код..." onkeydown="if(event.key==='Enter')checkAccess()">
       <div class="error-msg" id="access-error" style="display:none">Неверный код доступа</div>
     </div>
-    <button class="btn btn-primary" onclick="checkAccess()" style="width:100%">Продолжить →</button>
+    <button class="btn btn-primary" onclick="checkAccess()" style="width:100%" id="btn-continue">Продолжить →</button>
+    <div style="display:flex;justify-content:center;margin-top:1.25rem">
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('ru')" id="lang-ru">RU</button>
+        <button class="lang-btn" onclick="setLang('en')" id="lang-en">EN</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -195,11 +207,17 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <div id="home-menu" class="screen" style="align-items:center;justify-content:center;padding:2rem;min-height:100vh">
   <div class="home-card">
     <div class="home-logo" style="background:linear-gradient(135deg,#9521FE,#6976F6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">B2B | Marketing Team</div>
-    <h1 class="home-title">Матрица<br>компетенций</h1>
-    <p class="home-sub">Пройди опрос самооценки — займёт около 5 минут. Результаты увидит только администратор.</p>
+    <h1 class="home-title" id="home-title">Матрица<br>компетенций</h1>
+    <p class="home-sub" id="menu-subtitle">Пройди опрос самооценки — займёт около 5 минут. Результаты увидит только администратор.</p>
     <div class="btn-row">
       <button class="btn btn-primary" id="btn-take-survey" onclick="showScreen('survey');initSurvey()">Пройти опрос →</button>
       <button class="btn" id="btn-admin-login" onclick="showScreen('admin-login')" style="display:none">Войти как администратор</button>
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:1.25rem">
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('ru')" id="lang-ru-menu">RU</button>
+        <button class="lang-btn" onclick="setLang('en')" id="lang-en-menu">EN</button>
+      </div>
     </div>
   </div>
 </div>
@@ -277,9 +295,9 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <div id="done" class="screen">
   <div class="done-card">
     <div class="done-icon">✓</div>
-    <h2 style="font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:.5rem">Готово!</h2>
-    <p style="font-size:14px;color:var(--text-2);margin-bottom:2rem;line-height:1.7">Ответы сохранены. Администратор сформирует матрицу и пришлёт тебе результаты на почту.</p>
-    <button class="btn btn-primary" onclick="showScreen('home')">На главную</button>
+    <h2 style="font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:.5rem" id="done-title">Готово!</h2>
+    <p style="font-size:14px;color:var(--text-2);margin-bottom:2rem;line-height:1.7" id="done-sub">Ответы сохранены. Администратор сформирует матрицу и пришлёт тебе результаты на почту.</p>
+    <button class="btn btn-primary" onclick="showScreen('home')" id="done-home">На главную</button>
   </div>
 </div>
 
@@ -582,9 +600,13 @@ function ok(data) {
         <label class="field-label">Компетенция</label>
         <input class="field-input" id="q-form-comp" placeholder="Например: Аналитика">
       </div>
+      <div class="field-group" style="margin-bottom:10px">
+        <label class="field-label">Текст вопроса (RU)</label>
+        <textarea class="field-input" id="q-form-text" rows="2" style="resize:vertical" placeholder="Как ты обычно..."></textarea>
+      </div>
       <div class="field-group" style="margin-bottom:1rem">
-        <label class="field-label">Текст вопроса</label>
-        <textarea class="field-input" id="q-form-text" rows="3" style="resize:vertical" placeholder="Как ты обычно..."></textarea>
+        <label class="field-label">Текст вопроса (EN) <span style="color:var(--text-3);font-weight:400">— оставь пустым для автоперевода</span></label>
+        <textarea class="field-input" id="q-form-text-en" rows="2" style="resize:vertical" placeholder="Auto-translated if empty..."></textarea>
       </div>
       <input type="hidden" id="q-form-id">
       <input type="hidden" id="q-form-row">
@@ -847,14 +869,24 @@ async function initSurvey() {
   }
 }
 
+const SOFT_QUESTIONS_EN = [
+  'I meet deadlines and give advance notice if something goes wrong',
+  'I can prioritize effectively when there are many tasks',
+  'I openly accept feedback and apply it',
+  'I show initiative: I suggest improvements without waiting for tasks',
+  'I communicate effectively within the team',
+  'I adapt quickly to changes',
+];
+
 function renderSoftQuestions() {
-  document.getElementById('soft-questions').innerHTML = SOFT_QUESTIONS.map((q,i) => `
+  const qs = currentLang === 'en' ? SOFT_QUESTIONS_EN : SOFT_QUESTIONS;
+  document.getElementById('soft-questions').innerHTML = qs.map((q,i) => `
     <div class="q-block">
       <div class="q-text">${q}</div>
       <div class="scale-row" id="soft-scale-${i}">
         ${[1,2,3,4].map(v=>`<button class="scale-btn" onclick="selectScale('soft',${i},${v},this.parentElement)">${v}</button>`).join('')}
       </div>
-      <div class="scale-hint"><span>Новичок</span><span>Эксперт</span></div>
+      <div class="scale-hint"><span>${t('scale_novice')}</span><span>${t('scale_expert')}</span></div>
     </div>`).join('');
 }
 
@@ -919,18 +951,19 @@ function renderClusterQuestions() {
       lastComp = q.comp;
       compHeader = `<div class="section-sep" style="margin-top:${i===0?'0':'1.5rem'}">${q.comp}</div>`;
     }
-    const badge = q.type === 'С'
-      ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#FDF0E8;color:#8B4513;margin-bottom:8px;display:inline-block">Ситуационный</span>`
-      : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#EEF3FA;color:#1D4E89;margin-bottom:8px;display:inline-block">Проверочный</span>`;
+    const qText = (currentLang === 'en' && q.text_en) ? q.text_en : q.text;
+    const badge = (q.type === 'С' || q.type === 'S')
+      ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#FDF0E8;color:#8B4513;margin-bottom:8px;display:inline-block">${t('situational')}</span>`
+      : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#EEF3FA;color:#1D4E89;margin-bottom:8px;display:inline-block">${t('verification')}</span>`;
     return `${compHeader}
     <div class="q-block" style="margin-bottom:8px">
       ${badge}
-      <div class="q-text" style="margin-bottom:10px">${q.text}</div>
+      <div class="q-text" style="margin-bottom:10px">${qText}</div>
       <textarea
         id="cluster-ans-${i}"
         onchange="currentUser.clusterAnswers[${i}]=this.value"
         oninput="currentUser.clusterAnswers[${i}]=this.value"
-        placeholder="Твой ответ..."
+        placeholder="${t('your_answer')}"
         style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'Onest',sans-serif;font-size:13px;color:var(--text);outline:none;resize:vertical;min-height:60px;line-height:1.6;transition:border-color .15s"
         onfocus="this.style.borderColor='#9521FE'" onblur="this.style.borderColor=''"
       >${currentUser.clusterAnswers[i]||''}</textarea>
@@ -956,7 +989,7 @@ function goStep(n) {
   }
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
   document.getElementById('step-'+n).classList.add('active');
-  const labels = ['','Шаг 1 из 3','Шаг 2 из 3','Шаг 3 из 3'];
+  const labels = ['',t('step1_label'),t('step2_label'),t('step3_label')];
   const widths = ['','33%','66%','100%'];
   document.getElementById('survey-step-label').textContent = labels[n];
   document.getElementById('progress-fill').style.width = widths[n];
@@ -980,7 +1013,8 @@ async function submitSurvey() {
     clusterAnswers: {...currentUser.clusterAnswers},
     openAnswers: {...currentUser.openAnswers},
     status: 'new',
-    matrix: ''
+    matrix: '',
+    lang: currentLang
   };
   try {
     await gsPost(entry);
@@ -992,6 +1026,174 @@ async function submitSurvey() {
   }
 }
 
+
+// ─── I18N ───
+let currentLang = 'ru';
+
+const T = {
+  ru: {
+    logo: 'B2B | Marketing Team',
+    title: 'Матрица компетенций',
+    subtitle_access: 'Введи код доступа чтобы продолжить.',
+    access_label: 'Код доступа',
+    access_placeholder: 'Введи код...',
+    btn_continue: 'Продолжить →',
+    access_error: 'Неверный код доступа',
+    subtitle_menu: 'Пройди опрос самооценки — займёт около 5 минут. Результаты увидит только администратор.',
+    btn_survey: 'Пройти опрос →',
+    btn_admin: 'Войти как администратор',
+    // Survey
+    step1_label: 'Шаг 1 из 3',
+    step2_label: 'Шаг 2 из 3',
+    step3_label: 'Шаг 3 из 3',
+    step1_title: 'Расскажи о себе',
+    step1_sub: 'Вводные данные и универсальные soft skills.',
+    step2_title: 'Выбери своё направление',
+    step2_sub: 'На следующем шаге — вопросы именно по твоему направлению.',
+    step3_sub: 'Ответь на каждый вопрос развёрнуто.',
+    name_label: 'Имя и фамилия',
+    name_placeholder: 'Иван Петров',
+    email_label: 'Рабочий email',
+    months_label: 'Сколько месяцев ты в команде?',
+    position_label: 'Теперь выбери свою должность',
+    soft_sep: 'Soft skills — для всех',
+    open_sep: 'Зоны роста',
+    open_q1: 'Что тебе даётся легче всего в работе?',
+    open_q2: 'В чём хочешь вырасти за следующие 3–6 месяцев?',
+    open_q3: 'Какие инструменты или навыки хочешь освоить?',
+    open_placeholder: '1–2 предложения...',
+    btn_next: 'Продолжить →',
+    btn_back: '← Назад',
+    btn_submit: 'Отправить результаты →',
+    choose_role: 'Выбери роль',
+    scale_novice: 'Новичок',
+    scale_expert: 'Эксперт',
+    situational: 'Ситуационный',
+    verification: 'Проверочный',
+    your_answer: 'Твой ответ...',
+    // Done
+    done_title: 'Готово!',
+    done_sub: 'Ответы сохранены. Администратор сформирует матрицу и пришлёт тебе результаты на почту.',
+    done_home: 'На главную',
+    // Admin
+    admin_title: 'Вход для администратора',
+    admin_sub: 'Ты уже авторизован как администратор.',
+    admin_enter: 'Войти в панель →',
+    // Matrix generation
+    generate_lang_label: 'Язык матрицы',
+    // Question editor
+    situational_short: 'С',
+    verification_short: 'П',
+  },
+  en: {
+    logo: 'B2B | Marketing Team',
+    title: 'Competency Matrix',
+    subtitle_access: 'Enter access code to continue.',
+    access_label: 'Access code',
+    access_placeholder: 'Enter code...',
+    btn_continue: 'Continue →',
+    access_error: 'Incorrect access code',
+    subtitle_menu: 'Complete the self-assessment survey — takes about 5 minutes. Only the administrator will see the results.',
+    btn_survey: 'Take survey →',
+    btn_admin: 'Login as administrator',
+    // Survey
+    step1_label: 'Step 1 of 3',
+    step2_label: 'Step 2 of 3',
+    step3_label: 'Step 3 of 3',
+    step1_title: 'Tell us about yourself',
+    step1_sub: 'Basic info and universal soft skills.',
+    step2_title: 'Choose your direction',
+    step2_sub: 'Next step — questions specific to your area.',
+    step3_sub: 'Answer each question in detail.',
+    name_label: 'Full name',
+    name_placeholder: 'John Smith',
+    email_label: 'Work email',
+    months_label: 'How many months have you been on the team?',
+    position_label: 'Now select your position',
+    soft_sep: 'Soft skills — for everyone',
+    open_sep: 'Growth areas',
+    open_q1: 'What comes most naturally to you at work?',
+    open_q2: 'What do you want to improve over the next 3–6 months?',
+    open_q3: 'What tools or skills do you want to develop?',
+    open_placeholder: '1–2 sentences...',
+    btn_next: 'Continue →',
+    btn_back: '← Back',
+    btn_submit: 'Submit results →',
+    choose_role: 'Choose your role',
+    scale_novice: 'Beginner',
+    scale_expert: 'Expert',
+    situational: 'Situational',
+    verification: 'Verification',
+    your_answer: 'Your answer...',
+    // Done
+    done_title: 'Done!',
+    done_sub: 'Your answers have been saved. The administrator will create a competency matrix and share the results with you.',
+    done_home: 'Back to home',
+    // Admin
+    admin_title: 'Administrator login',
+    admin_sub: 'You are already authorized as administrator.',
+    admin_enter: 'Enter panel →',
+    // Matrix generation
+    generate_lang_label: 'Matrix language',
+    // Question editor
+    situational_short: 'S',
+    verification_short: 'V',
+  }
+};
+
+function t(key) {
+  return T[currentLang]?.[key] || T['ru'][key] || key;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  // Update all lang buttons
+  ['lang-ru','lang-en','lang-ru-menu','lang-en-menu'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('active', (lang === 'ru' && id.includes('-ru')) || (lang === 'en' && id.includes('-en')));
+  });
+  applyTranslations();
+}
+
+function applyTranslations() {
+  const ids = {
+    'home-title': 'title',
+    'home-subtitle': 'subtitle_access',
+    'access-label': 'access_label',
+    'access-code': null, // placeholder
+    'btn-continue': 'btn_continue',
+    'access-error': 'access_error',
+    'menu-subtitle': 'subtitle_menu',
+    'btn-take-survey': 'btn_survey',
+    'btn-admin-login': 'btn_admin',
+    'done-title': 'done_title',
+    'done-sub': 'done_sub',
+    'done-home': 'done_home',
+  };
+  Object.entries(ids).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (!el || !key) return;
+    el.textContent = t(key);
+  });
+  // Placeholder
+  const ac = document.getElementById('access-code');
+  if (ac) ac.placeholder = t('access_placeholder');
+  const nm = document.getElementById('inp-name');
+  if (nm) nm.placeholder = t('name_placeholder');
+  // Logo
+  document.querySelectorAll('.home-logo').forEach(el => el.textContent = t('logo'));
+}
+
+// Initialize lang from localStorage
+(function() {
+  const saved = localStorage.getItem('lang');
+  if (saved) currentLang = saved;
+  // Apply on load
+  setTimeout(() => { applyTranslations(); syncLangButtons && syncLangButtons(); }, 50);
+})();
+
 // ─── ACCESS GATE ───
 function checkAccess() {
   const code = document.getElementById('access-code').value;
@@ -1002,15 +1204,28 @@ function checkAccess() {
     document.getElementById('btn-admin-login').style.display = 'none';
     document.getElementById('btn-take-survey').style.display = '';
     showScreen('home-menu');
+    applyTranslations();
+    syncLangButtons();
   } else if (code === ADMIN_PASS) {
     err.style.display = 'none';
     document.getElementById('access-code').value = '';
     document.getElementById('btn-admin-login').style.display = '';
     document.getElementById('btn-take-survey').style.display = '';
     showScreen('home-menu');
+    applyTranslations();
+    syncLangButtons();
   } else {
     err.style.display = 'block';
+    err.textContent = t('access_error');
   }
+}
+
+function syncLangButtons() {
+  ['lang-ru','lang-en','lang-ru-menu','lang-en-menu'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('active', (currentLang === 'ru' && id.includes('-ru')) || (currentLang === 'en' && id.includes('-en')));
+  });
 }
 
 // ─── ADMIN ───
@@ -1151,6 +1366,13 @@ function renderDetail(r) {
     <div class="action-bar">
       <div class="generating" id="gen-indicator"><div class="dot-pulse"><span></span><span></span><span></span></div> Claude генерирует матрицу...</div>
       <div class="sent-badge ${isSent?'visible':''}" id="sent-badge">✓ Отправлено на почту</div>
+      <div id="matrix-lang-select" style="display:flex;align-items:center;gap:8px;${hasMatrix?'display:none!important':''}">
+        <span style="font-size:12px;color:var(--text-2)">Язык:</span>
+        <div class="lang-switcher" style="scale:.9">
+          <button class="lang-btn active" onclick="setMatrixLang('ru',this)" id="mlang-ru">RU</button>
+          <button class="lang-btn" onclick="setMatrixLang('en',this)" id="mlang-en">EN</button>
+        </div>
+      </div>
       <button class="btn btn-primary" id="btn-generate" onclick="generateMatrix('${r.id}')" ${hasMatrix?'style="display:none"':''}>✦ Сгенерировать матрицу</button>
       <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>Скопировать текст</button>
       <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>Редактировать</button>
@@ -1382,6 +1604,7 @@ function showAddQuestionForm() {
   document.getElementById('q-form-type').value = 'С';
   document.getElementById('q-form-comp').value = '';
   document.getElementById('q-form-text').value = '';
+  document.getElementById('q-form-text-en').value = '';
   document.getElementById('q-form-id').value = '';
   document.getElementById('q-form-row').value = '';
   document.getElementById('q-form').style.display = 'block';
@@ -1399,6 +1622,7 @@ function editQuestion(idx) {
   document.getElementById('q-form-type').value = q.type;
   document.getElementById('q-form-comp').value = q.comp;
   document.getElementById('q-form-text').value = q.text;
+  document.getElementById('q-form-text-en').value = q.text_en || '';
   document.getElementById('q-form-id').value = q.id;
   document.getElementById('q-form-row').value = realIdx + 1; // +1 for header row
   document.getElementById('q-form').style.display = 'block';
@@ -1413,14 +1637,19 @@ async function saveQuestion() {
   const id = document.getElementById('q-form-id').value;
   const rowIndex = document.getElementById('q-form-row').value;
 
+  const textEn = document.getElementById('q-form-text-en').value.trim();
   if (!comp || !text) { showToast('Заполни компетенцию и текст вопроса'); return; }
 
-  showLoading('Сохраняем...');
+  showLoading('Сохраняем и переводим...');
   try {
-    await gsPost({
+    const result = await gsPost({
       action: 'saveQuestion',
-      question: { cluster, type, comp, text, id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
+      question: { cluster, type, comp, text, text_en: textEn, id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
     });
+    // If auto-translated, update the field
+    if (result.text_en && !textEn) {
+      document.getElementById('q-form-text-en').value = result.text_en;
+    }
     document.getElementById('q-form').style.display = 'none';
     // Reload questions
     const data = await gsPost({ action: 'getQuestions' });
@@ -1680,7 +1909,7 @@ async function approveAllQuestions() {
     }
     // Update local CLUSTER_QUESTIONS
     CLUSTER_QUESTIONS[reviewCluster] = reviewQuestions.map(q => ({
-      type: q.type, comp: q.comp, text: q.text
+      type: q.type, comp: q.comp, text: q.text, text_en: q.text_en || ''
     }));
     showToast('Вопросы сохранены ✓');
     showScreen('admin-structure');
