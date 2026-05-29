@@ -838,6 +838,70 @@ async function gsGet() {
   return resp.json();
 }
 
+// ─── SURVEY TRANSLATIONS ───
+function applySurveyTranslations(step) {
+  if (step === 1) {
+    const el = (id) => document.getElementById(id);
+    // Labels
+    const nameLabel = document.querySelector('label[for="inp-name"], .field-label');
+    // Step label and title
+    const stepLabel = document.querySelector('#step-1 .step-label');
+    const stepTitle = document.querySelector('#step-1 .step-title');
+    const stepSub = document.querySelector('#step-1 .step-sub');
+    if (stepLabel) stepLabel.textContent = t('step1_label');
+    if (stepTitle) stepTitle.textContent = t('step1_title');
+    if (stepSub) stepSub.textContent = t('step1_sub');
+    // Field labels
+    const labels = document.querySelectorAll('#step-1 .field-label');
+    const labelKeys = ['name_label','email_label','months_label'];
+    labels.forEach((l, i) => { if (labelKeys[i]) l.textContent = t(labelKeys[i]); });
+    // Placeholders
+    const nameInp = document.getElementById('inp-name');
+    if (nameInp) nameInp.placeholder = t('name_placeholder');
+    // Section separators
+    const seps = document.querySelectorAll('#step-1 .section-sep');
+    if (seps[0]) seps[0].textContent = t('soft_sep');
+    if (seps[1]) seps[1].textContent = t('open_sep');
+    // Open questions
+    const openBlocks = document.querySelectorAll('#step-1 .q-block');
+    const openKeys = ['open_q1','open_q2','open_q3'];
+    openBlocks.forEach((b, i) => {
+      const qt = b.querySelector('.q-text');
+      if (qt && openKeys[i]) qt.textContent = t(openKeys[i]);
+      const ta = b.querySelector('textarea');
+      if (ta) ta.placeholder = t('open_placeholder');
+    });
+    // Buttons
+    const nextBtn = document.querySelector('#step-1 .btn-primary');
+    if (nextBtn) nextBtn.textContent = t('btn_next');
+    // Re-render soft questions with correct lang
+    renderSoftQuestions();
+  }
+  if (step === 2) {
+    const stepLabel = document.querySelector('#step-2 .step-label');
+    const stepTitle = document.querySelector('#step-2 .step-title');
+    const stepSub = document.querySelector('#step-2 .step-sub');
+    if (stepLabel) stepLabel.textContent = t('step2_label');
+    if (stepTitle) stepTitle.textContent = t('step2_title');
+    if (stepSub) stepSub.textContent = t('step2_sub');
+    const btns = document.querySelectorAll('#step-2 .nav-row .btn');
+    if (btns[0]) btns[0].textContent = t('btn_back');
+    if (btns[1]) btns[1].textContent = t('btn_next');
+    // Position picker label
+    const posLabel = document.querySelector('.section-sep[data-pos]');
+    if (posLabel) posLabel.textContent = t('position_label');
+  }
+  if (step === 3) {
+    const stepLabel = document.querySelector('#step-3 .step-label');
+    const stepSub = document.querySelector('#step-3 .step-sub');
+    if (stepLabel) stepLabel.textContent = t('step3_label');
+    if (stepSub) stepSub.textContent = t('step3_sub');
+    const btns = document.querySelectorAll('#step-3 .nav-row .btn');
+    if (btns[0]) btns[0].textContent = t('btn_back');
+    if (btns[1]) btns[1].textContent = t('btn_submit');
+  }
+}
+
 // ─── SURVEY ───
 async function initSurvey() {
   currentUser = { name:'', email:'', months:'', role:null, softAnswers:{}, clusterAnswers:{}, openAnswers:{} };
@@ -847,6 +911,7 @@ async function initSurvey() {
   renderSoftQuestions();
   renderRoleGrid();
   goStep(1);
+  setTimeout(() => applySurveyTranslations(1), 50);
   // Load questions from Sheets in background
   try {
     const data = await gsPost({ action: 'getQuestions' });
@@ -993,6 +1058,7 @@ function goStep(n) {
   const widths = ['','33%','66%','100%'];
   document.getElementById('survey-step-label').textContent = labels[n];
   document.getElementById('progress-fill').style.width = widths[n];
+  applySurveyTranslations(n);
   window.scrollTo(0,0);
 }
 
