@@ -638,6 +638,18 @@ function ok(data) {
   </div>
 </div>
 
+
+<!-- STAT MODAL -->
+<div id="stat-modal" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);align-items:center;justify-content:center;padding:1.5rem">
+  <div style="background:var(--surface);border-radius:20px;max-width:480px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px;font-weight:500;flex:1" id="modal-title">Сотрудники</span>
+      <button onclick="closeStatModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);line-height:1">×</button>
+    </div>
+    <div style="overflow-y:auto;padding:1rem" id="modal-list"></div>
+  </div>
+</div>
+
 <!-- LOADING -->
 <div class="loading-overlay" id="loading-overlay">
   <div class="dot-pulse"><span></span><span></span><span></span></div>
@@ -838,6 +850,48 @@ async function testEmail() {
     });
     showToast('Тестовое письмо отправлено ✓');
   } catch(e) { showToast('Ошибка EmailJS: ' + (e.text||e.message)); }
+}
+
+
+// ─── STAT MODAL ───
+function showStatModal(filter) {
+  const titles = {
+    all: 'Прошли опрос',
+    generated: 'Матрица сформирована',
+    sent: 'Отправлено сотрудникам'
+  };
+  const filtered = filter === 'all'
+    ? currentRespondents
+    : currentRespondents.filter(r => r.status === filter || (filter === 'generated' && r.status === 'sent'));
+
+  document.getElementById('modal-title').textContent = titles[filter] + ` (${filtered.length})`;
+
+  const statusLabels = {new:'Новый', generated:'Матрица готова', sent:'Отправлено'};
+  const statusColors = {new:'var(--info)', generated:'var(--warn)', sent:'#4A8C60'};
+  const statusBg = {new:'var(--info-light)', generated:'var(--warn-light)', sent:'var(--accent-light)'};
+
+  document.getElementById('modal-list').innerHTML = filtered.length
+    ? filtered.map(r => `
+      <div onclick="closeStatModal();openDetail('${r.id}')" style="display:flex;align-items:center;gap:12px;padding:.875rem 1rem;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#7B1FD4;flex-shrink:0">
+          ${(r.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500;color:var(--text)">${r.name}</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:1px">${r.position||r.role?.name||'—'} · ${CLUSTER_LABELS[r.role?.cluster]||''}</div>
+        </div>
+        <span style="font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:${statusBg[r.status]||'var(--bg)'};color:${statusColors[r.status]||'var(--text-2)'};flex-shrink:0">${statusLabels[r.status]||r.status}</span>
+        <span style="color:var(--text-3);font-size:16px">›</span>
+      </div>`).join('')
+    : '<div style="text-align:center;padding:2rem;color:var(--text-3);font-size:14px">Нет сотрудников</div>';
+
+  const modal = document.getElementById('stat-modal');
+  modal.style.display = 'flex';
+  modal.onclick = (e) => { if (e.target === modal) closeStatModal(); };
+}
+
+function closeStatModal() {
+  document.getElementById('stat-modal').style.display = 'none';
 }
 
 // ─── GOOGLE SHEETS API ───
@@ -1393,10 +1447,25 @@ function renderAdminPanel() {
   currentRespondents.forEach(r => { const c = r.role?.cluster||'other'; clusters[c]=(clusters[c]||0)+1; });
   const top = Object.entries(clusters).sort((a,b)=>b[1]-a[1])[0];
   document.getElementById('admin-stats').innerHTML = `
-    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Прошли опрос</div></div>
-    <div class="stat-card"><div class="stat-num">${generated}</div><div class="stat-label">Матрица сформирована</div></div>
-    <div class="stat-card"><div class="stat-num">${sent}</div><div class="stat-label">Отправлено сотрудникам</div></div>
-    <div class="stat-card"><div class="stat-num">${top ? CLUSTER_LABELS[top[0]]||top[0] : '—'}</div><div class="stat-label">Самый большой кластер</div></div>
+    <div class="stat-card" onclick="showStatModal('all')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="stat-num">${total}</div>
+      <div class="stat-label">Прошли опрос</div>
+      <div style="font-size:11px;color:#9521FE;margin-top:6px">Посмотреть →</div>
+    </div>
+    <div class="stat-card" onclick="showStatModal('generated')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="stat-num">${generated}</div>
+      <div class="stat-label">Матрица сформирована</div>
+      <div style="font-size:11px;color:#9521FE;margin-top:6px">Посмотреть →</div>
+    </div>
+    <div class="stat-card" onclick="showStatModal('sent')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="stat-num">${sent}</div>
+      <div class="stat-label">Отправлено сотрудникам</div>
+      <div style="font-size:11px;color:#9521FE;margin-top:6px">Посмотреть →</div>
+    </div>
+    <div class="stat-card" style="cursor:default">
+      <div class="stat-num">${top ? CLUSTER_LABELS[top[0]]||top[0] : '—'}</div>
+      <div class="stat-label">Самый большой кластер</div>
+    </div>
   `;
   const statusLabels = {new:'Новый',generated:'Матрица готова',sent:'Отправлено'};
   const statusClasses = {new:'status-new',generated:'status-generated',sent:'status-sent'};
@@ -1412,7 +1481,7 @@ function renderAdminPanel() {
       <div class="resp-avatar">${(r.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="resp-info">
         <div class="resp-name">${r.name}</div>
-        <div class="resp-meta">${r.position || r.role?.name || '—'} · ${CLUSTER_LABELS[r.role?.cluster]||''} · ${r.submittedAt||''}</div>
+        <div class="resp-meta">${r.position || r.role?.name || '—'} · ${CLUSTER_LABELS[r.role?.cluster]||''} · ${r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('ru-RU') : ''}</div>
       </div>
       <span class="resp-status ${statusClasses[r.status]||'status-new'}">${statusLabels[r.status]||'Новый'}</span>
       <span style="color:var(--text-3);font-size:16px">›</span>
