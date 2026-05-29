@@ -227,6 +227,10 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
   <div class="survey-header">
     <button class="btn btn-ghost btn-sm" onclick="showScreen('home')">← Назад</button>
     <span class="survey-header-title" id="survey-step-label">Шаг 1 из 3</span>
+    <div class="lang-switcher" style="margin-right:8px">
+      <button class="lang-btn" onclick="setSurveyLang('ru')" id="survey-lang-ru">RU</button>
+      <button class="lang-btn" onclick="setSurveyLang('en')" id="survey-lang-en">EN</button>
+    </div>
     <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:33%"></div></div>
   </div>
   <div class="survey-body">
@@ -839,6 +843,22 @@ async function gsGet() {
 }
 
 // ─── SURVEY TRANSLATIONS ───
+function setSurveyLang(lang) {
+  setLang(lang);
+  // Update survey header buttons
+  document.getElementById('survey-lang-ru').classList.toggle('active', lang === 'ru');
+  document.getElementById('survey-lang-en').classList.toggle('active', lang === 'en');
+  // Re-apply translations to current step
+  const activeStep = document.querySelector('.step.active');
+  if (activeStep) {
+    const stepNum = parseInt(activeStep.id.replace('step-',''));
+    renderSoftQuestions();
+    applySurveyTranslations(stepNum);
+    if (stepNum === 3 && currentUser.role) renderClusterQuestions();
+  }
+}
+
+
 function applySurveyTranslations(step) {
   if (step === 1) {
     const el = (id) => document.getElementById(id);
@@ -911,7 +931,13 @@ async function initSurvey() {
   renderSoftQuestions();
   renderRoleGrid();
   goStep(1);
-  setTimeout(() => applySurveyTranslations(1), 50);
+  setTimeout(() => {
+    applySurveyTranslations(1);
+    const ru = document.getElementById('survey-lang-ru');
+    const en = document.getElementById('survey-lang-en');
+    if (ru) ru.classList.toggle('active', currentLang === 'ru');
+    if (en) en.classList.toggle('active', currentLang === 'en');
+  }, 50);
   // Load questions from Sheets in background
   try {
     const data = await gsPost({ action: 'getQuestions' });
