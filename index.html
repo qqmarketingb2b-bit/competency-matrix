@@ -564,7 +564,8 @@ function ok(data) {
     <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
     <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Редактор вопросов</span>
     <span class="admin-badge" style="margin-left:8px">Администратор</span>
-    <button class="btn btn-sm btn-primary" onclick="showAddQuestionForm()" style="margin-left:auto">+ Добавить вопрос</button>
+    <button class="btn btn-sm" onclick="bulkImportQuestions()" style="margin-left:auto;margin-right:8px">↓ Загрузить базу вопросов</button>
+    <button class="btn btn-sm btn-primary" onclick="showAddQuestionForm()">+ Добавить вопрос</button>
   </div>
   <div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
 
@@ -1629,6 +1630,26 @@ function showToast(msg) {
 }
 
 // ─── QUESTION EDITOR ───
+async function bulkImportQuestions() {
+  if (!confirm('Загрузить базу из 198 вопросов для всех 15 должностей? Текущие вопросы будут заменены.')) return;
+  showLoading('Загружаем 198 вопросов...');
+  try {
+    const result = await gsPost({ action: 'bulkImportQuestions' });
+    if (result.error) throw new Error(result.error);
+    showToast(`Загружено ${result.imported} вопросов ✓`);
+    // Reload questions
+    const data = await gsPost({ action: 'getQuestions' });
+    allQuestions = Array.isArray(data) ? data : [];
+    updateRoleFilter();
+    renderQuestionList();
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+
 let allQuestions = [];
 let currentQCluster = 'all';
 
