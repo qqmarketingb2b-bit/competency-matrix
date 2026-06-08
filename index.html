@@ -1859,11 +1859,15 @@ function syncLangButtons() {
 // ─── ADMIN ───
 async function adminLogin() {
   showLoading('Загружаем данные...');
-  await Promise.all([
-    loadProjects(),
-    loadSettingsFromSheets(),
-    currentAdminRole === 'main' ? loadSubAdmins() : Promise.resolve()
-  ]);
+  try {
+    await Promise.all([
+      loadProjects().catch(e => console.log('loadProjects error:', e)),
+      loadSettingsFromSheets().catch(e => console.log('loadSettings error:', e)),
+      currentAdminRole === 'main' ? loadSubAdmins().catch(e => console.log('loadSubAdmins error:', e)) : Promise.resolve()
+    ]);
+  } catch(e) {
+    console.log('adminLogin load error:', e);
+  }
   hideLoading();
   showScreen('admin-panel');
   // Show/hide access button based on role
