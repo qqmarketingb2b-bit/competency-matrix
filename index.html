@@ -2625,7 +2625,11 @@ let activeProjectFilter = '';
 function populateProjectDropdowns() {
   const opts = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   const pf = document.getElementById('project-filter');
-  if (pf) pf.innerHTML = `<option value="">${currentLang === 'en' ? 'All projects' : 'Все проекты'}</option>` + opts;
+  if (pf) {
+    const current = pf.value || activeProjectFilter;
+    pf.innerHTML = `<option value="">${currentLang === 'en' ? 'All projects' : 'Все проекты'}</option>` + opts;
+    if (current) pf.value = current;
+  }
   const sa = document.getElementById('sa-project');
   if (sa) sa.innerHTML = opts;
 }
