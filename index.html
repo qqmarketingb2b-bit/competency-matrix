@@ -989,6 +989,62 @@ const CLUSTER_QUESTIONS = {
 };
 
 // ─── SETTINGS ───
+// ─── EMAIL SUMMARY ───
+async function prepareSummary(id) {
+  const r = currentRespondents.find(x => String(x.id) === String(id));
+  if (!r || !r.matrix) { showToast('Сначала сгенерируй матрицу'); return; }
+  const btn = document.getElementById('btn-prepare');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  const summarySection = document.getElementById('email-summary-section');
+  const placeholder = document.getElementById('summary-placeholder');
+  const summaryDiv = document.getElementById('summary-text');
+  const summaryActions = document.getElementById('summary-actions');
+  if (summarySection) summarySection.style.display = 'block';
+  if (placeholder) { placeholder.style.display = 'block'; placeholder.textContent = 'Claude готовит выжимку...'; }
+  if (summaryDiv) summaryDiv.style.display = 'none';
+  const prompt = `На основе этой матрицы компетенций составь краткую выжимку для сотрудника.\n\nТребования:\n- Не более 400 слов\n- Дружелюбный тон\n- Включи: общую оценку (1-2 предложения), 2-3 сильные стороны, 2-3 зоны роста, грейд, 2-3 шага развития\n- Без markdown, обычный текст\n- Начни с обращения: ${r.name}\n\nМатрица:\n${r.matrix}`;
+  try {
+    const data = await gsPost({ action: 'generateMatrix', prompt });
+    if (data.error) throw new Error(data.error);
+    currentSummaryText = data.text.trim();
+    if (placeholder) placeholder.style.display = 'none';
+    if (summaryDiv) { summaryDiv.textContent = currentSummaryText; summaryDiv.style.display = 'block'; }
+    if (summaryActions) summaryActions.style.display = 'flex';
+    const sendBtn = document.getElementById('btn-send');
+    if (sendBtn) sendBtn.style.display = '';
+    showToast('Выжимка готова ✓');
+  } catch(e) {
+    if (placeholder) placeholder.textContent = 'Ошибка: ' + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✉ Подготовить письмо'; }
+  }
+}
+
+async function regenerateSummary(id) {
+  currentSummaryText = '';
+  await prepareSummary(id);
+}
+
+function editSummary() {
+  const summaryDiv = document.getElementById('summary-text');
+  if (!summaryDiv) return;
+  const current = summaryDiv.textContent;
+  summaryDiv.innerHTML = `<textarea style="width:100%;min-height:200px;padding:10px;border:1px solid #9521FE;border-radius:8px;font-family:inherit;font-size:13px;line-height:1.8;resize:vertical" id="summary-edit-area">${current}</textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-sm btn-primary" onclick="saveSummaryEdit()">Сохранить</button><button class="btn btn-sm" onclick="cancelSummaryEdit()">Отмена</button></div>`;
+}
+
+function saveSummaryEdit() {
+  const area = document.getElementById('summary-edit-area');
+  if (!area) return;
+  currentSummaryText = area.value;
+  const sd = document.getElementById('summary-text');
+  if (sd) sd.textContent = currentSummaryText;
+}
+
+function cancelSummaryEdit() {
+  const sd = document.getElementById('summary-text');
+  if (sd) sd.textContent = currentSummaryText;
+}
+
 let matrixLang = 'ru';
 
 function setMatrixLang(lang, btn) {
