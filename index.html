@@ -3412,8 +3412,8 @@ function renderStructureList() {
         </div>`;
     }).join('');
 
-    const inactiveClusters = isMain ? availClusters.filter(cid => !allActiveClusters.includes(cid)) : [];
-    const addClusterHTML = inactiveClusters.length && !isMain ? `
+    const inactiveClusters = availClusters.filter(cid => !allActiveClusters.includes(cid));
+    const addClusterHTML = inactiveClusters.length && isMain ? `
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span style="font-size:12px;color:var(--text-3)">Добавить кластер:</span>
         ${inactiveClusters.map(cid => {
