@@ -1091,7 +1091,7 @@ let currentSummaryText = '';
 // ─── SCREENS ───
 function showScreen(id) {
   // Block sub-admins from accessing restricted screens
-  if (currentAdminRole !== 'main' && ['admin-settings','admin-subadmins','admin-structure','admin-questions'].includes(id)) {
+  if (currentAdminRole !== 'main' && ['admin-settings','admin-subadmins'].includes(id)) {
     showToast(currentLang === 'en' ? 'Access denied' : 'Доступ запрещён');
     return;
   }
@@ -2060,8 +2060,8 @@ async function adminLogin() {
   const settingsBtn = document.getElementById('btn-settings-nav');
   const accessBtn2 = document.getElementById('btn-access');
   const isMain = currentAdminRole === 'main';
-  if (structBtn) structBtn.style.display = isMain ? '' : 'none';
-  if (qBtn) qBtn.style.display = isMain ? '' : 'none';
+  if (structBtn) structBtn.style.display = ''; // always show
+  if (qBtn) qBtn.style.display = ''; // always show
   if (settingsBtn) settingsBtn.style.display = isMain ? '' : 'none';
   if (accessBtn2) accessBtn2.style.display = isMain ? '' : 'none';
   loadAndRenderPanel();
@@ -2539,6 +2539,7 @@ async function bulkImportQuestions() {
     allQuestions = Array.isArray(data) ? data : [];
     updateQProjectFilter();
     updateRoleFilter();
+    renderClusterTabs();
     renderQuestionList();
   } catch(e) {
     showToast('Ошибка: ' + e.message);
@@ -2553,6 +2554,15 @@ let currentQCluster = 'all';
 
 async function openQuestionEditor(filterCluster) {
   if (!Array.isArray(PROJECTS)) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+  // Auto-filter for sub-admins
+  if (currentAdminRole !== 'main') {
+    const access = currentAdminRole.projectAccess ||
+      [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }];
+    // Set project filter to first allowed project
+    if (!currentQProject && access.length > 0) {
+      currentQProject = access[0].project;
+    }
+  }
   showScreen('admin-questions');
   if (filterCluster) {
     currentQCluster = filterCluster;
@@ -2563,6 +2573,7 @@ async function openQuestionEditor(filterCluster) {
     allQuestions = Array.isArray(data) ? data : [];
     updateQProjectFilter();
     updateRoleFilter();
+    renderClusterTabs();
     renderQuestionList();
   } catch(e) {
     showToast('Ошибка загрузки вопросов: ' + e.message);
@@ -2621,6 +2632,23 @@ function updateRoleFilter() {
   sel.value = currentQRole;
 }
 
+function getSubAdminAllowedClusters() {
+  if (currentAdminRole === 'main') return null; // null = all
+  const access = currentAdminRole.projectAccess ||
+    [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }];
+  const projectAccess = access.find(a => a.project === currentQProject) || access[0];
+  return projectAccess ? projectAccess.clusters : [];
+}
+
+function renderClusterTabs() {
+  const allowed = getSubAdminAllowedClusters();
+  document.querySelectorAll('#q-cluster-tabs .btn').forEach(btn => {
+    const id = btn.id.replace('qtab-','');
+    if (id === 'all') { btn.style.display = ''; return; }
+    btn.style.display = (!allowed || allowed.includes(id)) ? '' : 'none';
+  });
+}
+
 function renderQuestionList() {
   let filtered = currentQCluster === 'all'
     ? allQuestions
@@ -2633,6 +2661,11 @@ function renderQuestionList() {
       const qp = q.project || '1win_partners';
       return qp === currentQProject;
     });
+  }
+  // Filter by sub-admin allowed clusters
+  const allowedClusters = getSubAdminAllowedClusters();
+  if (allowedClusters) {
+    filtered = filtered.filter(q => allowedClusters.includes(q.cluster));
   }
 
   const CLUSTER_LABELS = {smm:'SMM',pr:'PR',content:'Content',performance:'Performance',management:'Management'};
@@ -2725,6 +2758,11 @@ function editQuestion(idx) {
       return qp === currentQProject;
     });
   }
+  // Filter by sub-admin allowed clusters
+  const allowedClusters = getSubAdminAllowedClusters();
+  if (allowedClusters) {
+    filtered = filtered.filter(q => allowedClusters.includes(q.cluster));
+  }
   const q = filtered[idx];
   const realIdx = allQuestions.indexOf(q);
   document.getElementById('q-form-title').textContent = 'Редактировать вопрос';
@@ -2773,6 +2811,7 @@ async function saveQuestion() {
     allQuestions = Array.isArray(data) ? data : [];
     updateQProjectFilter();
     updateRoleFilter();
+    renderClusterTabs();
     renderQuestionList();
     showToast(currentLang === 'en' ? 'Question saved ✓' : 'Вопрос сохранён ✓');
   } catch(e) {
@@ -2791,6 +2830,7 @@ async function deleteQuestion(qId, idx) {
     allQuestions = Array.isArray(data) ? data : [];
     updateQProjectFilter();
     updateRoleFilter();
+    renderClusterTabs();
     renderQuestionList();
     showToast(currentLang === 'en' ? 'Question deleted' : 'Вопрос удалён');
   } catch(e) {
@@ -3319,11 +3359,24 @@ async function createProject() {
 function renderStructureList() {
   const el = document.getElementById('structure-list');
   if (!el) return;
+  // For sub-admins: filter to allowed projects/clusters
+  const isMain = currentAdminRole === 'main';
+  const saAccess = isMain ? null : (currentAdminRole.projectAccess ||
+    [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }]);
 
-  el.innerHTML = PROJECTS.map((p) => {
+  const visibleProjects = isMain ? PROJECTS : PROJECTS.filter(p =>
+    saAccess.some(a => a.project === p.id)
+  );
+  el.innerHTML = visibleProjects.map((p) => {
+    // For sub-admins: only show their clusters in this project
+    const saProjectAccess = saAccess ? saAccess.find(a => a.project === p.id) : null;
+    const allowedClustersForProject = saProjectAccess ? saProjectAccess.clusters : null;
     const isMain = p.isMain || p.id === '1win_partners';
     const availClusters = isMain ? ALL_CLUSTERS : AVAILABLE_CLUSTERS;
-    const activeClusters = p.clusters || [];
+    const allActiveClusters = p.clusters || [];
+    const activeClusters = allowedClustersForProject
+      ? allActiveClusters.filter(c => allowedClustersForProject.includes(c))
+      : allActiveClusters;
 
     const activeClusterHTML = activeClusters.map(cid => {
       const c = CLUSTERS.find(x => x.cluster === cid);
@@ -3351,7 +3404,7 @@ function renderStructureList() {
         </div>`;
     }).join('');
 
-    const inactiveClusters = availClusters.filter(cid => !activeClusters.includes(cid));
+    const inactiveClusters = isMain ? availClusters.filter(cid => !allActiveClusters.includes(cid)) : [];
     const addClusterHTML = inactiveClusters.length && !isMain ? `
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span style="font-size:12px;color:var(--text-3)">Добавить кластер:</span>
