@@ -782,20 +782,10 @@ function ok(data) {
           </div>
         </div>
       </div>
-      <div class="field-group">
-        <label class="field-label">Проект</label>
-        <select class="field-input" id="sa-project">
-        </select>
-      </div>
       <div class="field-group" style="margin-bottom:1rem">
-        <label class="field-label">Доступ к кластерам</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="sa-clusters-picker">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="smm" style="accent-color:#9521FE"> SMM</label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="pr" style="accent-color:#9521FE"> PR</label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="content" style="accent-color:#9521FE"> Content</label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="performance" style="accent-color:#9521FE"> Performance</label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="management" style="accent-color:#9521FE"> Management</label>
-        </div>
+        <label class="field-label">Доступ к проектам и кластерам</label>
+        <div id="sa-projects-access" style="margin-top:8px;display:flex;flex-direction:column;gap:10px"></div>
+        <button onclick="addSAProjectRow()" style="margin-top:8px;background:none;border:1px dashed #9521FE;border-radius:8px;padding:7px 16px;font-size:13px;color:#9521FE;cursor:pointer;width:100%">+ Добавить проект</button>
       </div>
       <input type="hidden" id="sa-id">
       <div style="display:flex;gap:10px">
@@ -2603,7 +2593,9 @@ function renderSubAdminsList() {
       <div style="flex:1">
         <div style="font-size:14px;font-weight:500">${sa.name}</div>
         <div style="font-size:12px;color:var(--text-2);margin-top:2px">
-          ${PROJECTS.find(p=>p.id===sa.project)?.name || '1win Partners'} · ${sa.clusters.map(c => CLUSTER_LABELS[c]||c).join(', ')}
+          ${(sa.projectAccess || [{ project: sa.project, clusters: sa.clusters }])
+            .map(a => `${PROJECTS.find(p=>p.id===a.project)?.name||a.project}: ${(a.clusters||[]).map(c=>CLUSTER_LABELS[c]||c).join(', ')}`)
+            .join(' | ')}
         </div>
         <div style="font-size:11px;color:var(--text-3);margin-top:2px;font-family:monospace">
           Пароль: ${sa.password}
@@ -2631,9 +2623,34 @@ function showAddSubAdminForm() {
   document.getElementById('sa-name').value = '';
   document.getElementById('sa-password').value = '';
   document.getElementById('sa-id').value = '';
-  document.querySelectorAll('#sa-clusters-picker input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.getElementById('sa-projects-access').innerHTML = '';
+  addSAProjectRow();
   document.getElementById('subadmin-form').style.display = 'block';
   document.getElementById('subadmin-form').scrollIntoView({behavior:'smooth'});
+}
+
+function addSAProjectRow(projectId, selectedClusters) {
+  PROJECTS = loadProjects();
+  const container = document.getElementById('sa-projects-access');
+  const rowId = 'sa-row-' + Date.now();
+  const clusterOptions = ALL_CLUSTERS.map(cid => {
+    const c = CLUSTERS.find(x => x.cluster === cid);
+    const checked = selectedClusters?.includes(cid) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;padding:4px 10px;border-radius:16px;border:1px solid var(--border);background:var(--bg)"><input type="checkbox" class="sa-cluster-cb" value="${cid}" ${checked} style="accent-color:#9521FE"> ${c?.name||cid}</label>`;
+  }).join('');
+  const projectOpts = PROJECTS.map(p => `<option value="${p.id}" ${p.id===projectId?'selected':''}>${p.name}</option>`).join('');
+  const div = document.createElement('div');
+  div.className = 'sa-project-row';
+  div.id = rowId;
+  div.innerHTML = `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <select class="field-input sa-proj-select" style="flex:1;padding:6px 10px;font-size:13px">${projectOpts}</select>
+        <button onclick="document.getElementById('${rowId}').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;line-height:1">×</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${clusterOptions}</div>
+    </div>`;
+  container.appendChild(div);
 }
 
 function editSubAdmin(id) {
@@ -2643,11 +2660,9 @@ function editSubAdmin(id) {
   document.getElementById('sa-name').value = sa.name;
   document.getElementById('sa-password').value = sa.password;
   document.getElementById('sa-id').value = sa.id;
-  const saProjectEl = document.getElementById('sa-project');
-  if (saProjectEl) saProjectEl.value = sa.project || '1win_partners';
-  document.querySelectorAll('#sa-clusters-picker input[type=checkbox]').forEach(cb => {
-    cb.checked = sa.clusters.includes(cb.value);
-  });
+  document.getElementById('sa-projects-access').innerHTML = '';
+  const access = sa.projectAccess || [{ project: sa.project || '1win_partners', clusters: sa.clusters || [] }];
+  access.forEach(a => addSAProjectRow(a.project, a.clusters));
   document.getElementById('subadmin-form').style.display = 'block';
   document.getElementById('subadmin-form').scrollIntoView({behavior:'smooth'});
 }
@@ -2656,10 +2671,18 @@ function saveSubAdmin() {
   const name = document.getElementById('sa-name').value.trim();
   const password = document.getElementById('sa-password').value.trim();
   const id = document.getElementById('sa-id').value;
-  const clusters = [...document.querySelectorAll('#sa-clusters-picker input:checked')].map(cb => cb.value);
-  const project = document.getElementById('sa-project')?.value || '1win_partners';
+  // Collect multi-project access
+  const projectAccess = [];
+  document.querySelectorAll('.sa-project-row').forEach(row => {
+    const pid = row.querySelector('.sa-proj-select')?.value;
+    const clusters = [...row.querySelectorAll('.sa-cluster-cb:checked')].map(cb => cb.value);
+    if (pid && clusters.length) projectAccess.push({ project: pid, clusters });
+  });
   if (!name || !password) { showToast('Заполни имя и пароль'); return; }
-  if (!clusters.length) { showToast('Выбери хотя бы один кластер'); return; }
+  if (!projectAccess.length) { showToast('Добавь хотя бы один проект с кластерами'); return; }
+  // For backward compat: use first project's data as primary
+  const project = projectAccess[0]?.project || '1win_partners';
+  const clusters = projectAccess[0]?.clusters || [];
   // Check password not taken
   const conflict = subAdmins.find(a => a.password === password && a.id !== id);
   if (conflict || password === ADMIN_PASS || password === TEAM_PASS) {
@@ -2667,9 +2690,9 @@ function saveSubAdmin() {
   }
   if (id) {
     const idx = subAdmins.findIndex(a => a.id === id);
-    if (idx >= 0) subAdmins[idx] = { id, name, password, clusters, project };
+    if (idx >= 0) subAdmins[idx] = { id, name, password, clusters, project, projectAccess };
   } else {
-    subAdmins.push({ id: 'sa_' + Date.now(), name, password, clusters, project });
+    subAdmins.push({ id: 'sa_' + Date.now(), name, password, clusters, project, projectAccess });
   }
   saveSubAdminsLocal();
   document.getElementById('subadmin-form').style.display = 'none';
@@ -2710,11 +2733,10 @@ function getFilteredRespondents() {
   let result = currentRespondents;
   // Filter by sub-admin project and clusters
   if (currentAdminRole !== 'main') {
-    const allowedProject = currentAdminRole.project;
-    const allowedClusters = currentAdminRole.clusters || [];
+    const access = currentAdminRole.projectAccess ||
+      [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }];
     result = result.filter(r =>
-      (!allowedProject || r.project === allowedProject) &&
-      allowedClusters.includes(r.role?.cluster)
+      access.some(a => a.project === r.project && a.clusters.includes(r.role?.cluster))
     );
   }
   // Apply project filter from dropdown
@@ -3005,6 +3027,154 @@ function openStructureEditor() {
   PROJECTS = loadProjects();
   showScreen('admin-structure');
   renderStructureList();
+}
+
+function showAddProjectForm() {
+  const f = document.getElementById('add-project-form');
+  if (!f) return;
+  document.getElementById('new-project-name').value = '';
+  f.style.display = 'block';
+  f.scrollIntoView({behavior:'smooth'});
+}
+
+function createProject() {
+  const name = document.getElementById('new-project-name').value.trim();
+  if (!name) { showToast('Введи название проекта'); return; }
+  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+  PROJECTS.push({ id, name, clusters: [] });
+  saveProjects(PROJECTS);
+  document.getElementById('add-project-form').style.display = 'none';
+  renderStructureList();
+  showToast('Проект создан ✓');
+}
+
+function renderStructureList() {
+  const el = document.getElementById('structure-list');
+  if (!el) return;
+  PROJECTS = loadProjects();
+
+  el.innerHTML = PROJECTS.map((p) => {
+    const isMain = p.isMain || p.id === '1win_partners';
+    const availClusters = isMain ? ALL_CLUSTERS : AVAILABLE_CLUSTERS;
+    const activeClusters = p.clusters || [];
+
+    const activeClusterHTML = activeClusters.map(cid => {
+      const c = CLUSTERS.find(x => x.cluster === cid);
+      if (!c) return '';
+      const roles = c.roles || [];
+      return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px;padding:.6rem 1rem;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px;font-weight:600;flex:1">${c.name}</span>
+            <button class="btn btn-sm" onclick="openQuestionEditor('${cid}')" style="font-size:11px">✎ Вопросы</button>
+            <button class="btn btn-sm" onclick="generateQuestionsForCluster('${cid}','${c.name}','${c.desc}','','','${p.id}')" style="font-size:11px;background:#F2EAFD;color:#7B1FD4;border-color:transparent">✦ Генерировать</button>
+            ${!isMain ? `<button onclick="removeClusterFromProject('${p.id}','${cid}')" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;line-height:1;padding:0 4px">×</button>` : ''}
+          </div>
+          <div style="padding:.6rem 1rem;display:flex;flex-wrap:wrap;gap:6px">
+            ${roles.map((r,j) => `
+              <div style="display:flex;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 8px 3px 10px">
+                <span style="font-size:12px">${r}</span>
+                <button onclick="generateQuestionsForCluster('${cid}','${c.name}','${c.desc}','${r.replace(/'/g,"\'").replace(/"/g,'\"')}','','${p.id}')" style="background:none;border:none;cursor:pointer;color:#9521FE;font-size:12px;padding:0 2px">✦</button>
+                <button onclick="deleteRoleFromProject('${p.id}','${cid}',${j})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;line-height:1;padding:0 2px">×</button>
+              </div>`).join('')}
+            <button onclick="addRoleToProject('${p.id}','${cid}')" style="background:none;border:1px dashed var(--border);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--text-2);cursor:pointer">+ добавить</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    const inactiveClusters = availClusters.filter(cid => !activeClusters.includes(cid));
+    const addClusterHTML = inactiveClusters.length && !isMain ? `
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <span style="font-size:12px;color:var(--text-3)">Добавить кластер:</span>
+        ${inactiveClusters.map(cid => {
+          const c = CLUSTERS.find(x => x.cluster === cid);
+          return `<button onclick="addClusterToProject('${p.id}','${cid}')" style="background:none;border:1px dashed #9521FE;border-radius:20px;padding:4px 12px;font-size:12px;color:#9521FE;cursor:pointer">+ ${c?.name||cid}</button>`;
+        }).join('')}
+      </div>` : '';
+
+    const copyBtn = !isMain ? `<button class="btn btn-sm" onclick="copyQuestionsFromMain('${p.id}')" style="font-size:12px">↓ Копировать вопросы из 1win Partners</button>` : '';
+    const delBtn = !isMain ? `<button class="btn btn-sm" onclick="deleteProject('${p.id}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">Удалить проект</button>` : '';
+
+    return `
+      <div style="background:var(--surface);border:${isMain?'2px solid #9521FE':'1px solid var(--border)'};border-radius:var(--radius);margin-bottom:1.25rem;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px;font-weight:500">${p.name}</span>
+              ${isMain ? '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#F2EAFD;color:#7B1FD4">Основной</span>' : ''}
+            </div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:2px">${activeClusters.length} кластер(ов)</div>
+          </div>
+          <div style="display:flex;gap:8px">${copyBtn}${delBtn}</div>
+        </div>
+        <div style="padding:1rem 1.25rem">
+          ${activeClusterHTML || '<div style="font-size:13px;color:var(--text-3)">Нет кластеров — добавь ниже</div>'}
+          ${addClusterHTML}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function addClusterToProject(projectId, clusterId) {
+  const p = PROJECTS.find(x => x.id === projectId);
+  if (!p || p.clusters.includes(clusterId)) return;
+  p.clusters.push(clusterId);
+  saveProjects(PROJECTS);
+  renderStructureList();
+}
+
+function removeClusterFromProject(projectId, clusterId) {
+  if (!confirm('Удалить кластер из проекта?')) return;
+  const p = PROJECTS.find(x => x.id === projectId);
+  if (!p) return;
+  p.clusters = p.clusters.filter(c => c !== clusterId);
+  saveProjects(PROJECTS);
+  renderStructureList();
+}
+
+function addRoleToProject(projectId, clusterId) {
+  const name = prompt('Введи название должности:');
+  if (!name?.trim()) return;
+  const c = CLUSTERS.find(x => x.cluster === clusterId);
+  if (c && !c.roles.includes(name.trim())) {
+    c.roles.push(name.trim());
+    saveStructure();
+    renderStructureList();
+  }
+}
+
+function deleteRoleFromProject(projectId, clusterId, idx) {
+  const c = CLUSTERS.find(x => x.cluster === clusterId);
+  if (c) {
+    c.roles.splice(idx, 1);
+    saveStructure();
+    renderStructureList();
+  }
+}
+
+function deleteProject(projectId) {
+  if (!confirm('Удалить этот проект?')) return;
+  PROJECTS = PROJECTS.filter(p => p.id !== projectId);
+  saveProjects(PROJECTS);
+  renderStructureList();
+  showToast('Проект удалён');
+}
+
+async function copyQuestionsFromMain(targetProjectId) {
+  if (!confirm('Скопировать все вопросы из 1win Partners в этот проект?')) return;
+  showLoading('Копируем вопросы...');
+  try {
+    const data = await gsPost({ action: 'getQuestions' });
+    if (!Array.isArray(data) || !data.length) throw new Error('Нет вопросов');
+    for (const q of data) {
+      await gsPost({ action: 'saveQuestion', question: { ...q, id: undefined, project: targetProjectId } });
+    }
+    showToast('Вопросы скопированы ✓');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 function _oldGetDefaultStructure() {
