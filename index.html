@@ -3171,7 +3171,7 @@ async function addClusterToProject(projectId, clusterId) {
   renderStructureList();
 }
 
-async async function removeClusterFromProject(projectId, clusterId) {
+async function removeClusterFromProject(projectId, clusterId) {
   if (!confirm('Удалить кластер из проекта?')) return;
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p) return;
@@ -3180,7 +3180,7 @@ async async function removeClusterFromProject(projectId, clusterId) {
   renderStructureList();
 }
 
-async async function addRoleToProject(projectId, clusterId) {
+async function addRoleToProject(projectId, clusterId) {
   const name = prompt('Введи название должности:');
   if (!name?.trim()) return;
   const p = PROJECTS.find(x => x.id === projectId);
@@ -3198,7 +3198,7 @@ async async function addRoleToProject(projectId, clusterId) {
   }
 }
 
-async async function deleteRoleFromProject(projectId, clusterId, idx) {
+async function deleteRoleFromProject(projectId, clusterId, idx) {
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p) return;
   if (!p.clusterRoles) p.clusterRoles = {};
