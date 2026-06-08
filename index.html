@@ -2494,9 +2494,9 @@ function showAddQuestionForm() {
   document.getElementById('q-form-comp-en').value = '';
   document.getElementById('q-form-id').value = '';
   updateQFormRoles();
-  updateQFormProject();
+  try { updateQFormProject(); } catch(e) {}
   document.getElementById('q-form-role').value = currentQRole || '';
-  document.getElementById('q-form-project').value = currentQProject || '1win_partners';
+  const pfp = document.getElementById('q-form-project'); if (pfp) pfp.value = currentQProject || '1win_partners';
   document.getElementById('q-form-row').value = '';
   document.getElementById('q-form').style.display = 'block';
   document.getElementById('q-form').scrollIntoView({behavior:'smooth'});
@@ -2551,7 +2551,7 @@ async function saveQuestion() {
   try {
     const result = await gsPost({
       action: 'saveQuestion',
-      question: { cluster, role, type, comp, text, text_en: textEn, comp_en: compEn, project: document.getElementById('q-form-project')?.value || '1win_partners', id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
+      question: { cluster, role, type, comp, text, text_en: textEn, comp_en: compEn, project: (document.getElementById('q-form-project') || {}).value || currentQProject || '1win_partners', id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
     });
     // If auto-translated, update the field
     if (result.text_en && !textEn) {
@@ -3402,8 +3402,9 @@ function toggleApprove(i) {
 }
 
 async function regenerateSingleQuestion(i) {
-  const comment = document.getElementById('rq-comment-'+i).value.trim();
+  const comment = (document.getElementById('rq-comment-'+i) || {}).value?.trim() || '';
   const q = reviewQuestions[i];
+  if (!q) return;
   const btn = document.getElementById('approve-btn-'+i);
 
   const prompt = `Перегенерируй один вопрос для самооценки сотрудника B2B iGaming маркетинг команды.
