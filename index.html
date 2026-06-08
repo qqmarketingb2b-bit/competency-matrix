@@ -1029,6 +1029,7 @@ let selectedProject = null;
 let currentRespondents = [];
 let editMode = false;
 let currentDetailId = null;
+let currentDetailRecord = null;
 
 // ─── SCREENS ───
 function showScreen(id) {
@@ -2106,6 +2107,7 @@ function openDetail(id) {
   const r = currentRespondents.find(x => String(x.id) === String(id));
   if (!r) return;
   currentDetailId = id;
+  currentDetailRecord = r;
   editMode = false;
   showScreen('admin-detail');
   renderDetail(r);
