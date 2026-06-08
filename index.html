@@ -601,38 +601,24 @@ function ok(data) {
     <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
     <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Структура опроса</span>
     <span class="admin-badge" style="margin-left:8px">Администратор</span>
-    <button class="btn btn-sm btn-primary" onclick="showNewClusterForm()" style="margin-left:auto">+ Новый кластер</button>
+    <button class="btn btn-sm btn-primary" onclick="showAddProjectForm()" style="margin-left:auto">+ Новый проект</button>
   </div>
-  <div style="max-width:900px;margin:0 auto;padding:2rem 1.5rem">
+  <div style="max-width:960px;margin:0 auto;padding:2rem 1.5rem">
 
-    <!-- Форма нового кластера -->
-    <div id="new-cluster-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
-      <div style="font-size:15px;font-weight:500;margin-bottom:1.25rem">Новый кластер</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div class="field-group" style="margin:0">
-          <label class="field-label">Название кластера</label>
-          <input class="field-input" id="nc-name" placeholder="Например: Design">
-        </div>
-        <div class="field-group" style="margin:0">
-          <label class="field-label">Описание (1 строка)</label>
-          <input class="field-input" id="nc-desc" placeholder="Например: Визуал, брендинг, UI">
-        </div>
-      </div>
-      <div class="field-group" style="margin-bottom:12px">
-        <label class="field-label">Должности (через запятую)</label>
-        <input class="field-input" id="nc-roles" placeholder="Например: Art Director, Designer, Motion Designer">
-      </div>
+    <!-- Add project form -->
+    <div id="add-project-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:500;margin-bottom:1.25rem">Новый проект</div>
       <div class="field-group" style="margin-bottom:1rem">
-        <label class="field-label">Контекст для генерации вопросов (необязательно)</label>
-        <textarea class="field-input" id="nc-context" rows="2" style="resize:vertical" placeholder="Опиши чем занимается этот кластер в контексте B2B iGaming..."></textarea>
+        <label class="field-label">Название проекта</label>
+        <input class="field-input" id="new-project-name" placeholder="Например: 100HP">
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" onclick="createClusterAndGenerate()">Создать и сгенерировать вопросы ✦</button>
-        <button class="btn" onclick="document.getElementById('new-cluster-form').style.display='none'">Отмена</button>
+        <button class="btn btn-primary" onclick="createProject()">Создать проект</button>
+        <button class="btn" onclick="document.getElementById('add-project-form').style.display='none'">Отмена</button>
       </div>
     </div>
 
-    <!-- Список кластеров -->
+    <!-- Projects list -->
     <div id="structure-list"></div>
   </div>
 </div>
@@ -830,13 +816,30 @@ const SOFT_QUESTIONS = [
   'Я эффективно коммуницирую внутри команды',
   'Я быстро адаптируюсь к изменениям'
 ];
-const PROJECTS = [
-  { id: '1win_partners', name: '1win Partners' },
-  { id: 'fame', name: 'FAME' },
-  { id: 'performance_lab', name: 'Performance Lab' },
-  { id: 'mellAff', name: 'MellAff' },
-  { id: 'nda', name: 'NDA' },
+const PROJECTS_DEFAULT = [
+  { id: '1win_partners', name: '1win Partners', clusters: ['smm','pr','content','performance','management'], isMain: true },
+  { id: 'fame', name: 'FAME', clusters: [] },
+  { id: 'performance_lab', name: 'Performance Lab', clusters: [] },
+  { id: 'mellAff', name: 'MellAff', clusters: [] },
+  { id: 'nda', name: 'NDA', clusters: [] },
 ];
+
+// Load projects from localStorage (admin can customize)
+function loadProjects() {
+  try {
+    const saved = localStorage.getItem('projects_config');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+}
+function saveProjects(projects) {
+  localStorage.setItem('projects_config', JSON.stringify(projects));
+}
+let PROJECTS = loadProjects();
+
+// Available clusters per project (Management only in main)
+const AVAILABLE_CLUSTERS = ['smm','pr','content','performance'];
+const ALL_CLUSTERS = ['smm','pr','content','performance','management'];
 
 const CLUSTERS = [
   { name:'SMM', cluster:'smm', desc:'Контент, платформы, аналитика', desc_en:'Content, platforms, analytics',
@@ -1222,6 +1225,8 @@ function renderSoftQuestions() {
 function renderProjectGrid() {
   const grid = document.getElementById('project-grid');
   if (!grid) return;
+  // Reload projects to get latest config
+  PROJECTS = loadProjects();
   grid.innerHTML = PROJECTS.map((p,i) => `
     <div class="role-card" id="project-card-${i}" onclick="selectProject(${i})" style="padding:1.25rem 1.5rem">
       <div class="role-name" style="font-size:16px;font-weight:600">${p.name}</div>
@@ -1240,9 +1245,15 @@ function selectProject(i) {
 }
 
 function renderRoleGrid() {
-  const clusters = (typeof currentStructure !== 'undefined' && currentStructure.length > 0)
-    ? currentStructure : CLUSTERS;
-  document.getElementById('role-grid').innerHTML = clusters.map((c,i) => `
+  // Filter clusters based on selected project
+  let projectClusters = CLUSTERS;
+  if (selectedProject) {
+    const proj = PROJECTS.find(p => p.id === selectedProject.id);
+    if (proj && proj.clusters && proj.clusters.length > 0) {
+      projectClusters = CLUSTERS.filter(c => proj.clusters.includes(c.cluster));
+    }
+  }
+  document.getElementById('role-grid').innerHTML = projectClusters.map((c,i) => `
     <div class="role-card" id="cluster-card-${i}" onclick="selectCluster(${i})" style="padding:1.25rem 1.5rem">
       <div class="role-name" style="font-size:16px;font-weight:600">${c.name}</div>
       <div class="role-cluster" style="font-size:13px;margin-top:4px">${currentLang === 'en' && c.desc_en ? c.desc_en : c.desc}</div>
@@ -2623,6 +2634,7 @@ function deleteSubAdmin(id) {
 let activeProjectFilter = '';
 
 function populateProjectDropdowns() {
+  PROJECTS = loadProjects();
   const opts = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   const pf = document.getElementById('project-filter');
   if (pf) {
@@ -3180,47 +3192,24 @@ async function approveAllQuestions() {
   }
 }
 
-function addRole(cluster) {
-  const name = prompt('Введи название должности:');
-  if (!name?.trim()) return;
-  const c = currentStructure.find(s => s.cluster === cluster);
-  if (c) {
-    c.roles.push(name.trim());
-    saveStructure();
-    renderStructureList();
-    // Update CLUSTERS
-    const cl = CLUSTERS.find(cl => cl.cluster === cluster);
-    if (cl) cl.roles = c.roles;
-  }
+function saveStructure() {
+  // Save roles back to CLUSTERS (localStorage)
+  localStorage.setItem('clusters_roles', JSON.stringify(CLUSTERS.map(c => ({ cluster: c.cluster, roles: c.roles }))));
 }
 
-function deleteRole(cluster, idx) {
-  const c = currentStructure.find(s => s.cluster === cluster);
-  if (c) {
-    c.roles.splice(idx, 1);
-    saveStructure();
-    renderStructureList();
-    const cl = CLUSTERS.find(cl => cl.cluster === cluster);
-    if (cl) cl.roles = c.roles;
-  }
-}
-
-async function deleteCluster(cluster) {
-  if (!confirm('Удалить этот кластер и все его вопросы?')) return;
-  currentStructure = currentStructure.filter(c => c.cluster !== cluster);
-  await saveStructure();
-  await gsPost({ action: 'deleteClusterQuestions', cluster });
-  renderStructureList();
-  showToast('Кластер удалён');
-}
-
-async function saveStructure() {
+// Load saved roles on startup
+(function() {
   try {
-    await gsPost({ action: 'saveStructure', structure: currentStructure });
-  } catch(e) {
-    console.log('Structure save error:', e.message);
-  }
-}
+    const saved = localStorage.getItem('clusters_roles');
+    if (saved) {
+      const data = JSON.parse(saved);
+      data.forEach(d => {
+        const c = CLUSTERS.find(x => x.cluster === d.cluster);
+        if (c) c.roles = d.roles;
+      });
+    }
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>
