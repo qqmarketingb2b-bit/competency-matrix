@@ -2216,7 +2216,8 @@ async function generateMatrix(id) {
     document.getElementById('matrix-placeholder').style.display = 'none';
     document.getElementById('matrix-text').innerHTML = renderMatrixVisual(text);
     // Save matrix language for email
-    currentDetailRecord.matrixLang = matrixLang;
+    if (currentDetailRecord) currentDetailRecord.matrixLang = matrixLang;
+    if (idx >= 0) currentRespondents[idx].matrixLang = matrixLang;
     document.getElementById('matrix-text').classList.add('visible');
     document.getElementById('matrix-edit').value = text;
     document.getElementById('btn-edit').style.display = '';
