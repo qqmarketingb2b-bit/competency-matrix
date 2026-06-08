@@ -1274,36 +1274,59 @@ function selectProject(i) {
 }
 
 function renderRoleGrid() {
-  let projectClusters = CLUSTERS;
-  if (selectedProject) {
-    const proj = PROJECTS.find(p => p.id === selectedProject.id);
-    if (proj && proj.clusters && proj.clusters.length > 0) {
-      // Return clusters with project-specific roles
+  let projectClusters = [];
+  const proj = selectedProject ? PROJECTS.find(p => p.id === selectedProject.id) : null;
+
+  if (proj) {
+    if (proj.clusters && proj.clusters.length > 0) {
       projectClusters = CLUSTERS.filter(c => proj.clusters.includes(c.cluster)).map(c => ({
         ...c,
         roles: (proj.clusterRoles && proj.clusterRoles[c.cluster]) || c.roles
       }));
     }
+    // else: project exists but has no clusters yet — show empty message
+  } else {
+    // No project selected — show all clusters as fallback
+    projectClusters = CLUSTERS;
   }
-  document.getElementById('role-grid').innerHTML = projectClusters.map((c,i) => `
-    <div class="role-card" id="cluster-card-${i}" onclick="selectCluster(${i})" style="padding:1.25rem 1.5rem">
-      <div class="role-name" style="font-size:16px;font-weight:600">${c.name}</div>
-      <div class="role-cluster" style="font-size:13px;margin-top:4px">${currentLang === 'en' && c.desc_en ? c.desc_en : c.desc}</div>
-    </div>`).join('');
+
+  const grid = document.getElementById('role-grid');
+  if (projectClusters.length === 0) {
+    grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-3);font-size:14px">
+      ${currentLang==='en' ? 'No directions configured for this project yet.' : 'Для этого проекта пока не настроены направления.'}
+    </div>`;
+  } else {
+    grid.innerHTML = projectClusters.map((c,i) => `
+      <div class="role-card" id="cluster-card-${i}" onclick="selectCluster(${i})" style="padding:1.25rem 1.5rem">
+        <div class="role-name" style="font-size:16px;font-weight:600">${c.name}</div>
+        <div class="role-cluster" style="font-size:13px;margin-top:4px">${currentLang === 'en' && c.desc_en ? c.desc_en : c.desc}</div>
+      </div>`).join('');
+  }
+
   // position picker hidden initially
   if (!document.getElementById('position-picker')) {
     const div = document.createElement('div');
     div.id = 'position-picker';
     div.style.cssText = 'display:none;margin-top:1.5rem';
     div.innerHTML = `<div class="section-sep" style="margin-top:0">${currentLang === 'en' ? 'Now select your position' : 'Теперь выбери свою должность'}</div><div id="position-grid" class="role-grid"></div>`;
-    document.getElementById('role-grid').parentElement.insertBefore(div, document.getElementById('role-grid').nextSibling);
+    grid.parentElement.insertBefore(div, grid.nextSibling);
   }
 }
 
 function selectCluster(i) {
-  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('cluster-card-'+i).classList.add('selected');
-  currentUser.role = CLUSTERS[i];
+  // Get project-specific clusters same way as renderRoleGrid
+  let projectClusters = CLUSTERS;
+  const proj = selectedProject ? PROJECTS.find(p => p.id === selectedProject.id) : null;
+  if (proj && proj.clusters && proj.clusters.length > 0) {
+    projectClusters = CLUSTERS.filter(c => proj.clusters.includes(c.cluster)).map(c => ({
+      ...c,
+      roles: (proj.clusterRoles && proj.clusterRoles[c.cluster]) || c.roles
+    }));
+  }
+  document.querySelectorAll('#role-grid .role-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('cluster-card-'+i);
+  if (card) card.classList.add('selected');
+  currentUser.role = projectClusters[i];
   currentUser.position = '';
   currentUser.clusterAnswers = {};
   // render position cards
