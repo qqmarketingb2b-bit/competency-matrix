@@ -651,7 +651,13 @@ function ok(data) {
   </div>
   <div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
 
-    <!-- Фильтр по кластеру и должности -->
+    <!-- Фильтр по проекту, кластеру и должности -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text-2);flex-shrink:0">Проект:</label>
+      <select class="field-input" id="q-project-filter" onchange="filterQProject(this.value)" style="max-width:180px;padding:6px 10px;font-size:13px">
+        <option value="">Все проекты</option>
+      </select>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem" id="q-cluster-tabs">
       <button class="btn btn-sm" onclick="filterQCluster('all')" id="qtab-all" style="background:linear-gradient(135deg,#9521FE,#6976F6);color:#fff;border-color:transparent">Все</button>
       <button class="btn btn-sm" onclick="filterQCluster('smm')" id="qtab-smm">SMM</button>
@@ -685,6 +691,12 @@ function ok(data) {
           <label class="field-label">Должность <span style="color:var(--text-3);font-weight:400">— или оставь пустым для всех</span></label>
           <select class="field-input" id="q-form-role">
             <option value="">Все должности кластера</option>
+          </select>
+        </div>
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Проект</label>
+          <select class="field-input" id="q-form-project">
+            <option value="1win_partners">1win Partners</option>
           </select>
         </div>
         <div class="field-group" style="margin:0">
@@ -2287,6 +2299,7 @@ async function bulkImportQuestions() {
     // Reload questions
     const data = await gsPost({ action: 'getQuestions' });
     allQuestions = Array.isArray(data) ? data : [];
+    updateQProjectFilter();
     updateRoleFilter();
     renderQuestionList();
   } catch(e) {
@@ -2309,6 +2322,7 @@ async function openQuestionEditor(filterCluster) {
   try {
     const data = await gsPost({ action: 'getQuestions' });
     allQuestions = Array.isArray(data) ? data : [];
+    updateQProjectFilter();
     updateRoleFilter();
     renderQuestionList();
   } catch(e) {
@@ -2319,6 +2333,12 @@ async function openQuestionEditor(filterCluster) {
 }
 
 let currentQRole = '';
+let currentQProject = '';
+
+function filterQProject(project) {
+  currentQProject = project;
+  renderQuestionList();
+}
 
 function filterQCluster(cluster) {
   currentQCluster = cluster;
@@ -2343,6 +2363,15 @@ function filterQRole(role) {
   renderQuestionList();
 }
 
+function updateQProjectFilter() {
+  const sel = document.getElementById('q-project-filter');
+  if (!sel) return;
+  PROJECTS = loadProjects();
+  sel.innerHTML = '<option value="">Все проекты</option>' +
+    PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  sel.value = currentQProject;
+}
+
 function updateRoleFilter() {
   const sel = document.getElementById('q-role-filter');
   if (!sel) return;
@@ -2359,6 +2388,12 @@ function renderQuestionList() {
     : allQuestions.filter(q => q.cluster === currentQCluster);
   if (currentQRole) {
     filtered = filtered.filter(q => (q.role||'') === currentQRole);
+  }
+  if (currentQProject) {
+    filtered = filtered.filter(q => {
+      const qp = q.project || '1win_partners';
+      return qp === currentQProject;
+    });
   }
 
   const CLUSTER_LABELS = {smm:'SMM',pr:'PR',content:'Content',performance:'Performance',management:'Management'};
@@ -2401,6 +2436,14 @@ function renderQuestionList() {
   document.getElementById('q-list').innerHTML = html;
 }
 
+function updateQFormProject() {
+  const sel = document.getElementById('q-form-project');
+  if (!sel) return;
+  PROJECTS = loadProjects();
+  sel.innerHTML = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  sel.value = currentQProject || '1win_partners';
+}
+
 function updateQFormRoles() {
   const cluster = document.getElementById('q-form-cluster').value;
   const sel = document.getElementById('q-form-role');
@@ -2422,7 +2465,9 @@ function showAddQuestionForm() {
   document.getElementById('q-form-comp-en').value = '';
   document.getElementById('q-form-id').value = '';
   updateQFormRoles();
+  updateQFormProject();
   document.getElementById('q-form-role').value = currentQRole || '';
+  document.getElementById('q-form-project').value = currentQProject || '1win_partners';
   document.getElementById('q-form-row').value = '';
   document.getElementById('q-form').style.display = 'block';
   document.getElementById('q-form').scrollIntoView({behavior:'smooth'});
@@ -2435,11 +2480,19 @@ function editQuestion(idx) {
   if (currentQRole) {
     filtered = filtered.filter(q => (q.role||'') === currentQRole);
   }
+  if (currentQProject) {
+    filtered = filtered.filter(q => {
+      const qp = q.project || '1win_partners';
+      return qp === currentQProject;
+    });
+  }
   const q = filtered[idx];
   const realIdx = allQuestions.indexOf(q);
   document.getElementById('q-form-title').textContent = 'Редактировать вопрос';
   document.getElementById('q-form-cluster').value = q.cluster;
   updateQFormRoles();
+  updateQFormProject();
+  document.getElementById('q-form-project').value = q.project || '1win_partners';
   document.getElementById('q-form-role').value = q.role || '';
   document.getElementById('q-form-type').value = q.type;
   document.getElementById('q-form-comp').value = q.comp;
@@ -2469,7 +2522,7 @@ async function saveQuestion() {
   try {
     const result = await gsPost({
       action: 'saveQuestion',
-      question: { cluster, role, type, comp, text, text_en: textEn, comp_en: compEn, id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
+      question: { cluster, role, type, comp, text, text_en: textEn, comp_en: compEn, project: document.getElementById('q-form-project')?.value || '1win_partners', id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
     });
     // If auto-translated, update the field
     if (result.text_en && !textEn) {
@@ -2479,6 +2532,7 @@ async function saveQuestion() {
     // Reload questions
     const data = await gsPost({ action: 'getQuestions' });
     allQuestions = Array.isArray(data) ? data : [];
+    updateQProjectFilter();
     updateRoleFilter();
     renderQuestionList();
     showToast(currentLang === 'en' ? 'Question saved ✓' : 'Вопрос сохранён ✓');
@@ -2496,6 +2550,7 @@ async function deleteQuestion(qId, idx) {
     await gsPost({ action: 'deleteQuestion', questionId: qId });
     const data = await gsPost({ action: 'getQuestions' });
     allQuestions = Array.isArray(data) ? data : [];
+    updateQProjectFilter();
     updateRoleFilter();
     renderQuestionList();
     showToast(currentLang === 'en' ? 'Question deleted' : 'Вопрос удалён');
@@ -2946,22 +3001,13 @@ let currentStructure = []; // {cluster, name, desc, roles:[]}
 let reviewCluster = null;  // cluster being reviewed
 let reviewQuestions = [];  // [{type, comp, text, approved, comment}]
 
-async function openStructureEditor() {
+function openStructureEditor() {
+  PROJECTS = loadProjects();
   showScreen('admin-structure');
-  showLoading('Загружаем структуру...');
-  try {
-    // Load clusters from CLUSTERS constant + any custom ones from Sheets
-    const data = await gsPost({ action: 'getStructure' });
-    currentStructure = Array.isArray(data) && data.length > 0 ? data : getDefaultStructure();
-  } catch(e) {
-    currentStructure = getDefaultStructure();
-  } finally {
-    hideLoading();
-    renderStructureList();
-  }
+  renderStructureList();
 }
 
-function getDefaultStructure() {
+function _oldGetDefaultStructure() {
   return CLUSTERS.map(c => ({
     cluster: c.cluster,
     name: c.name,
@@ -2970,67 +3016,6 @@ function getDefaultStructure() {
   }));
 }
 
-function renderStructureList() {
-  const el = document.getElementById('structure-list');
-  if (!currentStructure.length) {
-    el.innerHTML = '<div class="empty-state">Нет кластеров</div>';
-    return;
-  }
-  el.innerHTML = currentStructure.map((c, i) => `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden">
-      <div style="display:flex;align-items:center;gap:12px;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:500">${c.name}</div>
-          <div style="font-size:12px;color:var(--text-2);margin-top:2px">${c.desc}</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-sm" onclick="openQuestionEditor('${c.cluster}')" style="font-size:12px" id="btn-questions">✎ <span id="btn-questions-label">Вопросы</span></button>
-  <button class="btn btn-sm" onclick="generateQuestionsForCluster('${c.cluster}','${c.name}','${c.desc}','')" style="font-size:12px;background:var(--accent-light);color:var(--accent);border-color:transparent">✦ Для всего кластера</button>
-          ${!['smm','pr','content','performance','management'].includes(c.cluster) ? `<button class="btn btn-sm" onclick="deleteCluster('${c.cluster}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">✕</button>` : ''}
-        </div>
-      </div>
-      <div style="padding:.875rem 1.25rem">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px">Должности</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px" id="roles-${c.cluster}">
-          ${c.roles.map((r,j) => `
-            <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 12px">
-              <span style="font-size:13px">${r}</span>
-              <button onclick="generateQuestionsForCluster('${c.cluster}','${c.name}','${c.desc}','${r}')" title="Сгенерировать вопросы для этой должности" style="background:none;border:none;cursor:pointer;color:#9521FE;font-size:13px;line-height:1;padding:0 3px">✦</button>
-              <button onclick="deleteRole('${c.cluster}',${j})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px;line-height:1;padding:0 2px">×</button>
-            </div>`).join('')}
-          <button onclick="addRole('${c.cluster}')" style="background:none;border:1px dashed var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-2);cursor:pointer">+ добавить</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function showNewClusterForm() {
-  document.getElementById('nc-name').value = '';
-  document.getElementById('nc-desc').value = '';
-  document.getElementById('nc-roles').value = '';
-  document.getElementById('nc-context').value = '';
-  document.getElementById('new-cluster-form').style.display = 'block';
-  document.getElementById('new-cluster-form').scrollIntoView({behavior:'smooth'});
-}
-
-async function createClusterAndGenerate() {
-  const name = document.getElementById('nc-name').value.trim();
-  const desc = document.getElementById('nc-desc').value.trim();
-  const rolesRaw = document.getElementById('nc-roles').value.trim();
-  const context = document.getElementById('nc-context').value.trim();
-  if (!name || !rolesRaw) { showToast('Заполни название и должности'); return; }
-  const roles = rolesRaw.split(',').map(r => r.trim()).filter(Boolean);
-  const cluster = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  const newC = { cluster, name, desc: desc || name, roles };
-  currentStructure.push(newC);
-  document.getElementById('new-cluster-form').style.display = 'none';
-  // Save structure
-  await saveStructure();
-  renderStructureList();
-  // Generate questions
-  await generateQuestionsForCluster(cluster, name, desc || name, '', context);
-}
 
 let reviewRole = '';
 
