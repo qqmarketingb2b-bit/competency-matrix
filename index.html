@@ -2315,21 +2315,24 @@ function renderMatrixVisual(text) {
 
   for (const line of lines) {
     const low = line.toLowerCase();
-    // Detect section headers
-    if (low.includes('общая картина') || low.includes('общий уровень') || low.includes('overall picture') || low.includes('overall level') || (low.startsWith('1.') && (low.includes('уровень') || low.includes('картина') || low.includes('overall') || low.includes('picture')))) {
-      currentSection = 'overview'; continue;
-    }
-    if (low.includes('сильные стороны') || low.includes('strengths') || (low.startsWith('2.') && (low.includes('сильн') || low.includes('strength')))) {
-      currentSection = 'strengths'; continue;
-    }
-    if (low.includes('зоны роста') || low.includes('growth areas') || low.includes('growth zone') || (low.startsWith('3.') && (low.includes('рост') || low.includes('growth') || low.includes('зон')))) {
-      currentSection = 'growth'; continue;
-    }
-    if (low.includes('грейд') || low.includes('потенциал') || low.includes('grade') || low.includes('potential') || (low.startsWith('4.') && (low.includes('грейд') || low.includes('grade') || low.includes('потенц')))) {
-      currentSection = 'grade'; continue;
-    }
-    if (low.includes('план развития') || low.includes('development plan') || low.includes('план') || (low.startsWith('5.') && (low.includes('план') || low.includes('plan') || low.includes('развит')))) {
-      currentSection = 'plan'; continue;
+    // Detect section headers - check for numbered sections like "1." "2." etc
+    const isHeader = /^\d+[.)\s]/.test(line) || line.length < 60;
+    if (isHeader) {
+      if (low.includes('общая картина') || low.includes('overall picture') || low.includes('общий') || (/^1[.)]/i.test(line) && (low.includes('картин') || low.includes('уровн') || low.includes('picture') || low.includes('overall')))) {
+        currentSection = 'overview'; continue;
+      }
+      if (low.includes('сильные стороны') || low.includes('strengths') || (/^2[.)]/i.test(line) && (low.includes('сильн') || low.includes('strength')))) {
+        currentSection = 'strengths'; continue;
+      }
+      if (low.includes('зоны роста') || low.includes('growth areas') || low.includes('growth zone') || (/^3[.)]/i.test(line) && (low.includes('рост') || low.includes('growth') || low.includes('зон')))) {
+        currentSection = 'growth'; continue;
+      }
+      if (low.includes('грейд') || low.includes('grade and') || (/^4[.)]/i.test(line) && (low.includes('грейд') || low.includes('grade') || low.includes('потенц') || low.includes('potential')))) {
+        currentSection = 'grade'; continue;
+      }
+      if (low.includes('план развития') || low.includes('development plan') || (/^5[.)]/i.test(line) && (low.includes('план') || low.includes('plan') || low.includes('развит')))) {
+        currentSection = 'plan'; continue;
+      }
     }
 
     // Skip empty section markers
