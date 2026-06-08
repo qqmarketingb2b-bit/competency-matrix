@@ -2139,8 +2139,12 @@ function renderDetail(r) {
       <div style="font-size:13px;color:var(--text);background:var(--bg);border-radius:6px;padding:8px 10px;width:100%;line-height:1.6">${val}</div>
     </div>`;
   }).join('');
-  const openSection = [['Сильные стороны',r.openAnswers[1]],['Зоны роста',r.openAnswers[2]],['Хочет освоить',r.openAnswers[3]]]
-    .filter(([,v])=>v).map(([l,v])=>`<div style="font-size:13px;color:var(--text-2);margin-top:.5rem">${l}</div><div class="open-answer">${v}</div>`).join('');
+  const openAnswers = r.openAnswers || {};
+  const openSection = [
+    [currentLang==='en'?'Strengths':'Сильные стороны', openAnswers[1]],
+    [currentLang==='en'?'Growth areas':'Зоны роста', openAnswers[2]],
+    [currentLang==='en'?'Wants to learn':'Хочет освоить', openAnswers[3]]
+  ].filter(([,v])=>v).map(([l,v])=>`<div style="font-size:13px;color:var(--text-2);margin-top:.5rem">${l}</div><div class="open-answer">${v}</div>`).join('');
   const isSent = r.status === 'sent';
   const hasMatrix = !!r.matrix;
   document.getElementById('detail-content').innerHTML = `
@@ -2213,16 +2217,15 @@ async function generateMatrix(id) {
     currentRespondents[idx].matrix = text;
     currentRespondents[idx].status = 'generated';
     document.getElementById('gen-indicator').classList.remove('visible');
-    document.getElementById('matrix-placeholder').style.display = 'none';
-    document.getElementById('matrix-text').innerHTML = renderMatrixVisual(text);
-    // Save matrix language for email
+    const placeholder = document.getElementById('matrix-placeholder');
+    if (placeholder) placeholder.style.display = 'none';
+    const matrixText = document.getElementById('matrix-text');
+    if (matrixText) { matrixText.innerHTML = renderMatrixVisual(text); matrixText.classList.add('visible'); }
     if (currentDetailRecord) currentDetailRecord.matrixLang = matrixLang;
     if (idx >= 0) currentRespondents[idx].matrixLang = matrixLang;
-    document.getElementById('matrix-text').classList.add('visible');
-    document.getElementById('matrix-edit').value = text;
-    document.getElementById('btn-edit').style.display = '';
-    document.getElementById('btn-copy').style.display = '';
-    document.getElementById('btn-send').style.display = '';
+    const matrixEdit = document.getElementById('matrix-edit');
+    if (matrixEdit) matrixEdit.value = text;
+    ['btn-edit','btn-copy','btn-send'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
   } catch(e) {
     document.getElementById('gen-indicator').classList.remove('visible');
     document.getElementById('btn-generate').style.display = '';
