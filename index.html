@@ -1132,7 +1132,7 @@ function setSurveyLang(lang) {
     const stepNum = parseInt(activeStep.id.replace('step-',''));
     renderSoftQuestions();
     applySurveyTranslations(stepNum);
-    if (stepNum === 2) renderProjectGrid();
+    if (stepNum === 1) renderProjectGrid();
     if (stepNum === 3) renderRoleGrid();
     if (stepNum === 4 && currentUser.role) renderClusterQuestions();
   }
@@ -1140,42 +1140,57 @@ function setSurveyLang(lang) {
 
 
 function applySurveyTranslations(step) {
+  // Helper
+  const qs = (sel) => document.querySelector(sel);
+  const qsa = (sel) => document.querySelectorAll(sel);
+
   if (step === 1) {
-    // Step label and title
-    const stepLabel = document.querySelector('#step-1 .step-label');
-    const stepTitle = document.querySelector('#step-1 .step-title');
-    const stepSub   = document.querySelector('#step-1 .step-sub');
-    if (stepLabel) stepLabel.textContent = t('step1_label');
-    if (stepTitle) stepTitle.textContent = t('step1_title');
-    if (stepSub)   stepSub.textContent   = t('step1_sub');
-    // Field labels — target them by position inside #step-1
-    const labels = document.querySelectorAll('#step-1 .field-label');
+    // Project selection step
+    const lbl = qs('#step-1 .step-label');
+    const ttl = qs('#step-1 .step-title');
+    const sub = qs('#step-1 .step-sub');
+    if (lbl) lbl.textContent = currentLang === 'en' ? 'Step 1 of 4' : 'Шаг 1 из 4';
+    if (ttl) ttl.textContent = t('step1_title');
+    if (sub) sub.textContent = t('step1_sub');
+    const nextBtn = qs('#step-1 .btn-primary');
+    if (nextBtn) nextBtn.textContent = t('btn_next');
+  }
+
+  if (step === 2) {
+    // About me step
+    const lbl = qs('#step-2 .step-label');
+    const ttl = qs('#step-2 .step-title');
+    const sub = qs('#step-2 .step-sub');
+    if (lbl) lbl.textContent = t('step2_label');
+    if (ttl) ttl.textContent = t('step2_title');
+    if (sub) sub.textContent = t('step2_sub');
+    // Field labels
+    const labels = qsa('#step-2 .field-label');
     const labelKeys = ['name_label','email_label','months_label'];
     labels.forEach((l, i) => { if (labelKeys[i]) l.textContent = t(labelKeys[i]); });
     // Placeholders
     const nameInp = document.getElementById('inp-name');
     if (nameInp) nameInp.placeholder = t('name_placeholder');
     // Section separators
-    const seps = document.querySelectorAll('#step-1 .section-sep');
+    const seps = qsa('#step-2 .section-sep');
     if (seps[0]) seps[0].textContent = t('soft_sep');
     if (seps[1]) seps[1].textContent = t('open_sep');
-    // Open questions — find all q-blocks that have a textarea (open questions only)
+    // Open questions
     const openQTexts = [t('open_q1'), t('open_q2'), t('open_q3')];
-    const openPH     = t('open_placeholder');
     let openIdx = 0;
-    document.querySelectorAll('#step-1 .q-block').forEach(b => {
+    qsa('#step-2 .q-block').forEach(b => {
       const ta = b.querySelector('textarea');
       if (ta && openIdx < openQTexts.length) {
         const qt = b.querySelector('.q-text');
         if (qt) qt.textContent = openQTexts[openIdx];
-        ta.placeholder = openPH;
+        ta.placeholder = t('open_placeholder');
         openIdx++;
       }
     });
     // Buttons
-    const nextBtn = document.querySelector('#step-1 .btn-primary');
-    if (nextBtn) nextBtn.textContent = t('btn_next');
-    // Re-render soft questions with correct lang
+    const btns = qsa('#step-2 .nav-row .btn');
+    if (btns[0]) btns[0].textContent = t('btn_back');
+    if (btns[1]) btns[1].textContent = t('btn_next');
     renderSoftQuestions();
   }
   if (step === 2) {
@@ -1609,6 +1624,20 @@ const T = {
     situational_short: 'С',
     verification_short: 'П',
     loading_questions: 'Загружаем вопросы...',
+    // Survey step 1 - project
+    step1_title: 'Выбери проект',
+    step1_sub: 'В каком проекте ты работаешь?',
+    // Survey step 2 - about
+    step2_label: 'Шаг 2 из 4',
+    step2_title: 'Расскажи о себе',
+    step2_sub: 'Вводные данные и универсальные soft skills.',
+    // Survey step 3 - cluster
+    step3_label: 'Шаг 3 из 4',
+    step3_title: 'Выбери своё направление',
+    step3_sub: 'На следующем шаге — вопросы именно по твоему направлению.',
+    // Survey step 4
+    step4_label: 'Шаг 4 из 4',
+    step4_sub: 'Ответь на каждый вопрос развёрнуто.',
   },
   en: {
     logo: 'B2B | Marketing Team',
@@ -1738,6 +1767,20 @@ const T = {
     situational_short: 'S',
     verification_short: 'V',
     loading_questions: 'Loading questions...',
+    // Survey step 1 - project
+    step1_title: 'Choose your project',
+    step1_sub: 'Which project are you working on?',
+    // Survey step 2 - about
+    step2_label: 'Step 2 of 4',
+    step2_title: 'Tell us about yourself',
+    step2_sub: 'Basic info and universal soft skills.',
+    // Survey step 3 - cluster
+    step3_label: 'Step 3 of 4',
+    step3_title: 'Choose your direction',
+    step3_sub: 'Next — questions specific to your area.',
+    // Survey step 4
+    step4_label: 'Step 4 of 4',
+    step4_sub: 'Answer each question in detail.',
   }
 };
 
@@ -1770,7 +1813,8 @@ function applyTranslations() {
   const setPH   = (id, key) => setT(id, key, 'placeholder');
 
   // Home screens
-  setText('home-title', 'title');
+  const homeTitle = document.getElementById('home-title');
+  if (homeTitle) homeTitle.innerHTML = currentLang === 'en' ? 'Competency<br>Matrix' : 'Матрица<br>компетенций';
   setText('home-subtitle', 'subtitle_access');
   setText('access-label', 'access_label');
   setPH('access-code', 'access_placeholder');
