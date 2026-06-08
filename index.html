@@ -225,7 +225,7 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <!-- SURVEY -->
 <div id="survey" class="screen">
   <div class="survey-header">
-    <button class="btn btn-ghost btn-sm" onclick="showScreen('home')">← Назад</button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('home')" id="survey-back-btn">← <span id="survey-back-label">Назад</span></button>
     <span class="survey-header-title" id="survey-step-label">Шаг 1 из 3</span>
     <div class="lang-switcher" style="margin-right:8px">
       <button class="lang-btn" onclick="setSurveyLang('ru')" id="survey-lang-ru">RU</button>
@@ -308,11 +308,11 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <!-- ADMIN LOGIN -->
 <div id="admin-login" class="screen">
   <div class="login-card">
-    <h2 class="login-title">Вход для<br><em style="font-family:'Instrument Serif',serif">администратора</em></h2>
-    <p class="login-sub">Ты уже авторизован как администратор.</p>
+    <h2 class="login-title" id="admin-login-title">Вход для<br><em style="font-family:'Instrument Serif',serif">администратора</em></h2>
+    <p class="login-sub" id="admin-login-sub">Ты уже авторизован как администратор.</p>
     <div style="display:flex;gap:10px;margin-top:1rem">
-      <button class="btn" onclick="showScreen('home-menu')">Назад</button>
-      <button class="btn btn-primary" onclick="adminLogin()" style="flex:1">Войти в панель →</button>
+      <button class="btn" onclick="showScreen('home-menu')" id="btn-admin-back">Назад</button>
+      <button class="btn btn-primary" onclick="adminLogin()" style="flex:1" id="btn-admin-enter">Войти в панель →</button>
     </div>
   </div>
 </div>
@@ -320,18 +320,18 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <!-- ADMIN PANEL -->
 <div id="admin-panel" class="screen">
   <div class="admin-header">
-    <span class="admin-logo">Матрица</span>
-    <span class="admin-badge">Администратор</span>
-    <button class="btn btn-ghost btn-sm" onclick="openStructureEditor()" style="margin-left:auto;margin-right:4px">⊞ Структура</button>
-    <button class="btn btn-ghost btn-sm" onclick="openQuestionEditor()" style="margin-right:4px">✎ Вопросы</button>
-    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-right:4px">⚙ Настройки</button>
-    <button class="btn btn-ghost btn-sm" onclick="showScreen('home');document.getElementById('access-code').value=''">Выйти</button>
+    <span class="admin-logo" id="admin-logo-text">Матрица</span>
+    <span class="admin-badge" id="admin-badge-text">Администратор</span>
+    <button class="btn btn-ghost btn-sm" onclick="openStructureEditor()" style="margin-left:auto;margin-right:4px" id="btn-structure">⊞ <span id="btn-structure-label">Структура</span></button>
+    <button class="btn btn-ghost btn-sm" onclick="openQuestionEditor()" style="margin-right:4px" id="btn-questions">✎ <span id="btn-questions-label">Вопросы</span></button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-right:4px" id="btn-settings-nav">⚙ <span id="btn-settings-label">Настройки</span></button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('home');document.getElementById('access-code').value=''" id="btn-logout">Выйти</button>
   </div>
   <div class="admin-body">
     <div class="admin-stats" id="admin-stats"></div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
-      <span class="section-title-sm" style="margin:0">Сотрудники</span>
-      <button class="btn btn-sm" onclick="loadAndRenderPanel()" style="margin-left:auto">↻ Обновить</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;" id="admin-employees-bar">
+      <span class="section-title-sm" style="margin:0" id="employees-label">Сотрудники</span>
+      <button class="btn btn-sm" onclick="loadAndRenderPanel()" style="margin-left:auto" id="btn-refresh-panel">↻ Обновить</button>
     </div>
     <div class="resp-list" id="resp-list">
       <div class="empty-state">Загрузка...</div>
@@ -342,7 +342,7 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 <!-- ADMIN DETAIL -->
 <div id="admin-detail" class="screen">
   <div class="detail-header">
-    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Все сотрудники</button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()" id="detail-back-btn">← Все сотрудники</button>
     <span class="admin-badge" style="margin-left:auto">Администратор</span>
   </div>
   <div class="detail-body" id="detail-content"></div>
@@ -564,8 +564,8 @@ function ok(data) {
     <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
     <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Редактор вопросов</span>
     <span class="admin-badge" style="margin-left:8px">Администратор</span>
-    <button class="btn btn-sm" onclick="bulkImportQuestions()" style="margin-left:auto;margin-right:8px">↓ Загрузить базу вопросов</button>
-    <button class="btn btn-sm btn-primary" onclick="showAddQuestionForm()">+ Добавить вопрос</button>
+    <button class="btn btn-sm" onclick="bulkImportQuestions()" id="q-import-btn" style="margin-left:auto;margin-right:8px">↓ Загрузить базу вопросов</button>
+    <button class="btn btn-sm btn-primary" onclick="showAddQuestionForm()" id="q-add-btn">+ Добавить вопрос</button>
   </div>
   <div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
 
@@ -579,7 +579,7 @@ function ok(data) {
       <button class="btn btn-sm" onclick="filterQCluster('management')" id="qtab-management">Management</button>
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem">
-      <label style="font-size:13px;color:var(--text-2);flex-shrink:0">Фильтр по должности:</label>
+      <label style="font-size:13px;color:var(--text-2);flex-shrink:0" id="q-role-filter-label">Фильтр по должности:</label>
       <select class="field-input" id="q-role-filter" onchange="filterQRole(this.value)" style="max-width:280px">
         <option value="">Все должности</option>
       </select>
@@ -863,9 +863,9 @@ async function testEmail() {
 // ─── STAT MODAL ───
 function showStatModal(filter) {
   const titles = {
-    all: 'Прошли опрос',
-    generated: 'Матрица сформирована',
-    sent: 'Отправлено сотрудникам'
+    all: t('stat_completed'),
+    generated: t('stat_generated'),
+    sent: t('stat_sent')
   };
   const filtered = filter === 'all'
     ? currentRespondents
@@ -873,7 +873,11 @@ function showStatModal(filter) {
 
   document.getElementById('modal-title').textContent = titles[filter] + ` (${filtered.length})`;
 
-  const statusLabels = {new:'Новый', generated:'Матрица готова', sent:'Отправлено'};
+  const statusLabels = {
+    new: currentLang === 'en' ? 'New' : 'Новый',
+    generated: currentLang === 'en' ? 'Matrix ready' : 'Матрица готова',
+    sent: currentLang === 'en' ? 'Sent' : 'Отправлено'
+  };
   const statusColors = {new:'var(--info)', generated:'var(--warn)', sent:'#4A8C60'};
   const statusBg = {new:'var(--info-light)', generated:'var(--warn-light)', sent:'var(--accent-light)'};
 
@@ -1146,7 +1150,7 @@ async function renderClusterQuestions() {
 function goStep(n) {
   if (n === 2) {
     const name = document.getElementById('inp-name').value.trim();
-    if (!name) { showToast('Введи имя'); return; }
+    if (!name) { showToast(currentLang === 'en' ? 'Enter your name' : 'Введи имя'); return; }
     currentUser.name = name;
     currentUser.email = document.getElementById('inp-email').value.trim();
     currentUser.months = document.getElementById('inp-months').value;
@@ -1155,8 +1159,8 @@ function goStep(n) {
     currentUser.openAnswers[3] = document.getElementById('open-3').value;
   }
   if (n === 3) {
-    if (!currentUser.role) { showToast('Выбери направление'); return; }
-    if (!currentUser.position) { showToast('Выбери должность'); return; }
+    if (!currentUser.role) { showToast(currentLang === 'en' ? 'Choose a direction' : 'Выбери направление'); return; }
+    if (!currentUser.position) { showToast(currentLang === 'en' ? 'Choose a position' : 'Выбери должность'); return; }
     // Show step first, then load questions async
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById('step-3').classList.add('active');
@@ -1263,6 +1267,79 @@ const T = {
     admin_enter: 'Войти в панель →',
     // Matrix generation
     generate_lang_label: 'Язык матрицы',
+    // Admin
+    admin_logo: 'Матрица',
+    admin_badge_text: 'Администратор',
+    btn_structure: 'Структура',
+    btn_questions: 'Вопросы',
+    btn_settings_nav: 'Настройки',
+    btn_logout: 'Выйти',
+    admin_login_title_html: 'Вход для<br><em style="font-family:\'Instrument Serif\',serif">администратора</em>',
+    admin_login_sub: 'Ты уже авторизован как администратор.',
+    btn_admin_back: 'Назад',
+    btn_admin_enter: 'Войти в панель →',
+    survey_back: 'Назад',
+    // Stats
+    stat_completed: 'Прошли опрос',
+    stat_generated: 'Матрица сформирована',
+    stat_sent: 'Отправлено сотрудникам',
+    stat_top_cluster: 'Самый большой кластер',
+    stat_view: 'Посмотреть →',
+    employees: 'СОТРУДНИКИ',
+    btn_refresh: '↻ Обновить',
+    // Settings
+    settings_title: 'Настройки',
+    gs_section: 'Google Sheets (база данных)',
+    gs_url_label: 'URL вашего Apps Script (Web App URL)',
+    gs_save: 'Сохранить',
+    gs_instructions_btn: '📋 Показать инструкцию',
+    gs_test_btn: 'Проверить подключение',
+    ejs_section: 'EmailJS (отправка на почту)',
+    claude_section: 'Claude API',
+    // Question editor
+    q_editor_title: 'Редактор вопросов',
+    q_all: 'Все',
+    q_role_filter: 'Фильтр по должности:',
+    q_all_roles: 'Все должности',
+    q_add_btn: '+ Добавить вопрос',
+    q_import_btn: '↓ Загрузить базу вопросов',
+    q_new_title: 'Новый вопрос',
+    q_edit_title: 'Редактировать вопрос',
+    q_cluster_label: 'Кластер',
+    q_position_label: 'Должность',
+    q_type_label: 'Тип',
+    q_comp_ru: 'Компетенция (RU)',
+    q_comp_en_label: 'Компетенция (EN)',
+    q_text_ru: 'Текст вопроса (RU)',
+    q_text_en_label: 'Текст вопроса (EN)',
+    q_auto: '— авто если пусто',
+    q_save: 'Сохранить',
+    q_cancel: 'Отмена',
+    q_situational_full: 'Ситуационный (С)',
+    q_verification_full: 'Проверочный (П)',
+    // Structure editor
+    structure_title: 'Структура опроса',
+    structure_add_cluster: '+ Новый кластер',
+    structure_cluster_name: 'Название кластера',
+    structure_cluster_desc: 'Описание (1 строка)',
+    structure_roles_label: 'Должности (через запятую)',
+    structure_context: 'Контекст для генерации вопросов (необязательно)',
+    structure_create_btn: 'Создать и сгенерировать вопросы ✦',
+    structure_positions: 'Должности',
+    structure_q_btn: '✎ Вопросы',
+    structure_gen_btn: '✦ Для всего кластера',
+    // Matrix
+    matrix_title: 'Матрица компетенций',
+    matrix_placeholder: 'Нажми «Сгенерировать» — Claude проанализирует ответы и составит матрицу.',
+    btn_generate: '✦ Сгенерировать матрицу',
+    btn_copy: 'Скопировать текст',
+    btn_edit: 'Редактировать',
+    btn_save_edit: 'Сохранить правки',
+    btn_send_email: 'Отправить на почту →',
+    sent_badge: '✓ Отправлено на почту',
+    generating: 'Claude генерирует матрицу...',
+    // Modal
+    modal_close: '×',
     // Question editor
     situational_short: 'С',
     verification_short: 'П',
@@ -1318,6 +1395,79 @@ const T = {
     admin_enter: 'Enter panel →',
     // Matrix generation
     generate_lang_label: 'Matrix language',
+    // Admin
+    admin_logo: 'Matrix',
+    admin_badge_text: 'Administrator',
+    btn_structure: 'Structure',
+    btn_questions: 'Questions',
+    btn_settings_nav: 'Settings',
+    btn_logout: 'Log out',
+    admin_login_title_html: 'Login as<br><em style="font-family:\'Instrument Serif\',serif">administrator</em>',
+    admin_login_sub: 'You are already authorized as administrator.',
+    btn_admin_back: 'Back',
+    btn_admin_enter: 'Enter panel →',
+    survey_back: 'Back',
+    // Stats
+    stat_completed: 'Completed survey',
+    stat_generated: 'Matrix generated',
+    stat_sent: 'Sent to employees',
+    stat_top_cluster: 'Largest cluster',
+    stat_view: 'View →',
+    employees: 'EMPLOYEES',
+    btn_refresh: '↻ Refresh',
+    // Settings
+    settings_title: 'Settings',
+    gs_section: 'Google Sheets (database)',
+    gs_url_label: 'Your Apps Script URL (Web App URL)',
+    gs_save: 'Save',
+    gs_instructions_btn: '📋 Show instructions',
+    gs_test_btn: 'Test connection',
+    ejs_section: 'EmailJS (email delivery)',
+    claude_section: 'Claude API',
+    // Question editor
+    q_editor_title: 'Question editor',
+    q_all: 'All',
+    q_role_filter: 'Filter by position:',
+    q_all_roles: 'All positions',
+    q_add_btn: '+ Add question',
+    q_import_btn: '↓ Load question database',
+    q_new_title: 'New question',
+    q_edit_title: 'Edit question',
+    q_cluster_label: 'Cluster',
+    q_position_label: 'Position',
+    q_type_label: 'Type',
+    q_comp_ru: 'Competency (RU)',
+    q_comp_en_label: 'Competency (EN)',
+    q_text_ru: 'Question text (RU)',
+    q_text_en_label: 'Question text (EN)',
+    q_auto: '— auto if empty',
+    q_save: 'Save',
+    q_cancel: 'Cancel',
+    q_situational_full: 'Situational (S)',
+    q_verification_full: 'Verification (V)',
+    // Structure editor
+    structure_title: 'Survey structure',
+    structure_add_cluster: '+ New cluster',
+    structure_cluster_name: 'Cluster name',
+    structure_cluster_desc: 'Description (1 line)',
+    structure_roles_label: 'Positions (comma separated)',
+    structure_context: 'Context for question generation (optional)',
+    structure_create_btn: 'Create and generate questions ✦',
+    structure_positions: 'Positions',
+    structure_q_btn: '✎ Questions',
+    structure_gen_btn: '✦ For entire cluster',
+    // Matrix
+    matrix_title: 'Competency matrix',
+    matrix_placeholder: 'Click Generate — Claude will analyze answers and create a matrix.',
+    btn_generate: '✦ Generate matrix',
+    btn_copy: 'Copy text',
+    btn_edit: 'Edit',
+    btn_save_edit: 'Save changes',
+    btn_send_email: 'Send by email →',
+    sent_badge: '✓ Sent by email',
+    generating: 'Claude is generating matrix...',
+    // Modal
+    modal_close: '×',
     position_label: 'Now select your position',
     // Question editor
     situational_short: 'S',
@@ -1343,40 +1493,87 @@ function setLang(lang) {
 }
 
 function applyTranslations() {
-  const ids = {
-    'home-title': 'title',
-    'home-subtitle': 'subtitle_access',
-    'access-label': 'access_label',
-    'access-code': null, // placeholder
-    'btn-continue': 'btn_continue',
-    'access-error': 'access_error',
-    'menu-subtitle': 'subtitle_menu',
-    'btn-take-survey': 'btn_survey',
-    'btn-admin-login': 'btn_admin',
-    'done-title': 'done_title',
-    'done-sub': 'done_sub',
-    'done-home': 'done_home',
-  };
-  Object.entries(ids).forEach(([id, key]) => {
+  const setT = (id, key, attr) => {
     const el = document.getElementById(id);
-    if (!el || !key) return;
-    el.textContent = t(key);
-  });
-  // Placeholder
-  const ac = document.getElementById('access-code');
-  if (ac) ac.placeholder = t('access_placeholder');
-  const nm = document.getElementById('inp-name');
-  if (nm) nm.placeholder = t('name_placeholder');
+    if (!el) return;
+    if (attr === 'placeholder') el.placeholder = t(key);
+    else if (attr === 'html') el.innerHTML = t(key);
+    else el.textContent = t(key);
+  };
+  const setText = (id, key) => setT(id, key);
+  const setHTML = (id, key) => setT(id, key, 'html');
+  const setPH   = (id, key) => setT(id, key, 'placeholder');
+
+  // Home screens
+  setText('home-title', 'title');
+  setText('home-subtitle', 'subtitle_access');
+  setText('access-label', 'access_label');
+  setPH('access-code', 'access_placeholder');
+  setText('access-error', 'access_error');
+  setText('btn-continue', 'btn_continue');
+  setText('menu-subtitle', 'subtitle_menu');
+  setText('btn-take-survey', 'btn_survey');
+  setText('btn-admin-login', 'btn_admin');
+  // Done screen
+  setText('done-title', 'done_title');
+  setText('done-sub', 'done_sub');
+  setText('done-home', 'done_home');
+  // Admin login
+  setHTML('admin-login-title', 'admin_login_title_html');
+  setText('admin-login-sub', 'admin_login_sub');
+  setText('btn-admin-back', 'btn_admin_back');
+  setText('btn-admin-enter', 'btn_admin_enter');
+  // Admin panel header
+  setText('admin-logo-text', 'admin_logo');
+  setText('admin-badge-text', 'admin_badge_text');
+  const bsl = document.getElementById('btn-structure-label');
+  if (bsl) bsl.textContent = t('btn_structure');
+  const bql = document.getElementById('btn-questions-label');
+  if (bql) bql.textContent = t('btn_questions');
+  const bset = document.getElementById('btn-settings-label');
+  if (bset) bset.textContent = t('btn_settings_nav');
+  setText('btn-logout', 'btn_logout');
+  // Survey back
+  const sbl = document.getElementById('survey-back-label');
+  if (sbl) sbl.textContent = t('survey_back');
   // Logo
   document.querySelectorAll('.home-logo').forEach(el => el.textContent = t('logo'));
+  // Admin stats labels - re-render if panel visible
+  if (document.getElementById('admin-panel').classList.contains('active')) {
+    renderAdminPanel();
+  }
+  // Other admin elements
+  setText('employees-label', 'employees');
+  setText('btn-refresh-panel', 'btn_refresh');
+  // Matrix section
+  const genBtn = document.getElementById('btn-generate');
+  if (genBtn) genBtn.innerHTML = t('btn_generate');
+  const copyBtn = document.getElementById('btn-copy');
+  if (copyBtn) copyBtn.textContent = t('btn_copy');
+  const editBtn = document.getElementById('btn-edit');
+  if (editBtn && editBtn.textContent.trim() !== t('btn_cancel','Отмена')) editBtn.textContent = t('btn_edit');
+  const genInd = document.getElementById('gen-indicator');
+  if (genInd) { const span = genInd.querySelector('span+span+span'); }
+  // Question editor header
+  const qTitle = document.querySelector('#admin-questions .admin-header span:nth-child(2)');
+  if (qTitle) qTitle.textContent = t('q_editor_title');
+  const qImport = document.getElementById('q-import-btn');
+  if (qImport) qImport.textContent = t('q_import_btn');
+  const qAdd = document.getElementById('q-add-btn');
+  if (qAdd) qAdd.textContent = t('q_add_btn');
+  const qRoleLabel = document.getElementById('q-role-filter-label');
+  if (qRoleLabel) qRoleLabel.textContent = t('q_role_filter');
+  // Settings title
+  const settingsTitle = document.querySelector('#admin-settings .settings-body > div:first-child');
+  if (settingsTitle) settingsTitle.textContent = t('settings_title');
 }
 
-// Initialize lang from localStorage
+// Initialize lang - default always RU
 (function() {
-  const saved = localStorage.getItem('lang');
-  if (saved) currentLang = saved;
-  // Apply on load
-  setTimeout(() => { applyTranslations(); syncLangButtons && syncLangButtons(); }, 50);
+  // Always start with RU, user can switch
+  currentLang = 'ru';
+  localStorage.setItem('lang','ru');
+  setTimeout(() => { applyTranslations(); if(typeof syncLangButtons==='function') syncLangButtons(); }, 50);
 })();
 
 // ─── ACCESS GATE ───
@@ -1467,31 +1664,35 @@ function renderAdminPanel() {
   document.getElementById('admin-stats').innerHTML = `
     <div class="stat-card" onclick="showStatModal('all')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
       <div class="stat-num">${total}</div>
-      <div class="stat-label">Прошли опрос</div>
-      <div style="font-size:11px;color:#9521FE;margin-top:6px">Посмотреть →</div>
+      <div class="stat-label">${t('stat_completed')}</div>
+      <div style="font-size:11px;color:#9521FE;margin-top:6px">${t('stat_view')}</div>
     </div>
     <div class="stat-card" onclick="showStatModal('generated')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
       <div class="stat-num">${generated}</div>
-      <div class="stat-label">Матрица сформирована</div>
-      <div style="font-size:11px;color:#9521FE;margin-top:6px">Посмотреть →</div>
+      <div class="stat-label">${t('stat_generated')}</div>
+      <div style="font-size:11px;color:#9521FE;margin-top:6px">${t('stat_view')}</div>
     </div>
     <div class="stat-card" onclick="showStatModal('sent')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
       <div class="stat-num">${sent}</div>
-      <div class="stat-label">Отправлено сотрудникам</div>
-      <div style="font-size:11px;color:#9521FE;margin-top:6px">Посмотреть →</div>
+      <div class="stat-label">${t('stat_sent')}</div>
+      <div style="font-size:11px;color:#9521FE;margin-top:6px">${t('stat_view')}</div>
     </div>
     <div class="stat-card" style="cursor:default">
       <div class="stat-num">${top ? CLUSTER_LABELS[top[0]]||top[0] : '—'}</div>
-      <div class="stat-label">Самый большой кластер</div>
+      <div class="stat-label">${t('stat_top_cluster')}</div>
     </div>
   `;
-  const statusLabels = {new:'Новый',generated:'Матрица готова',sent:'Отправлено'};
+  const statusLabels = {
+    new: currentLang === 'en' ? 'New' : 'Новый',
+    generated: currentLang === 'en' ? 'Matrix ready' : 'Матрица готова',
+    sent: currentLang === 'en' ? 'Sent' : 'Отправлено'
+  };
   const statusClasses = {new:'status-new',generated:'status-generated',sent:'status-sent'};
   const listEl = document.getElementById('resp-list');
   if (!total) {
     listEl.innerHTML = !cfg.gsUrl
-      ? '<div class="empty-state">Сначала настрой Google Sheets в ⚙ Настройках</div>'
-      : '<div class="empty-state">Пока никто не прошёл опрос</div>';
+      ? `<div class="empty-state">${currentLang === 'en' ? 'First configure Google Sheets in ⚙ Settings' : 'Сначала настрой Google Sheets в ⚙ Настройках'}</div>`
+      : `<div class="empty-state">${currentLang === 'en' ? 'No one has completed the survey yet' : 'Пока никто не прошёл опрос'}</div>`;
     return;
   }
   listEl.innerHTML = [...currentRespondents].reverse().map(r => `
@@ -1551,32 +1752,32 @@ function renderDetail(r) {
     <div class="detail-name">${r.name}</div>
     <div class="detail-role">${r.position ? r.position + ' · ' : ''}${CLUSTER_LABELS[cluster]||''} · ${r.months||'?'} мес. в команде ${r.email ? '· '+r.email : ''}</div>
     <div class="answers-section">
-      <div class="answers-section-title">Soft skills</div>${softRows}
+      <div class="answers-section-title">${t('soft_sep')}</div>${softRows}
     </div>
     <div class="answers-section">
       <div class="answers-section-title">${CLUSTER_LABELS[cluster]||'Профессиональные'} компетенции</div>${clusterRows}
     </div>
     ${openSection ? `<div class="answers-section"><div class="answers-section-title">Открытые ответы</div>${openSection}</div>` : ''}
     <div class="matrix-section">
-      <div class="answers-section-title">Матрица компетенций</div>
-      <div id="matrix-placeholder" class="matrix-placeholder" ${hasMatrix?'style="display:none"':''}>Нажми «Сгенерировать» — Claude проанализирует ответы и составит матрицу.</div>
+      <div class="answers-section-title">${t('matrix_title')}</div>
+      <div id="matrix-placeholder" class="matrix-placeholder" ${hasMatrix?'style="display:none"':''}>${t('matrix_placeholder')}</div>
       <div class="matrix-text ${hasMatrix?'visible':''}" id="matrix-text">${r.matrix||''}</div>
       <textarea class="matrix-edit" id="matrix-edit">${r.matrix||''}</textarea>
     </div>
     <div class="action-bar">
-      <div class="generating" id="gen-indicator"><div class="dot-pulse"><span></span><span></span><span></span></div> Claude генерирует матрицу...</div>
-      <div class="sent-badge ${isSent?'visible':''}" id="sent-badge">✓ Отправлено на почту</div>
+      <div class="generating" id="gen-indicator"><div class="dot-pulse"><span></span><span></span><span></span></div> <span id="gen-indicator-text">Claude генерирует матрицу...</span></div>
+      <div class="sent-badge ${isSent?'visible':''}" id="sent-badge">${t('sent_badge')}</div>
       <div id="matrix-lang-select" style="display:flex;align-items:center;gap:8px;${hasMatrix?'display:none!important':''}">
-        <span style="font-size:12px;color:var(--text-2)">Язык:</span>
+        <span style="font-size:12px;color:var(--text-2)" id="matrix-lang-label">${currentLang === 'en' ? 'Language:' : 'Язык:'}</span>
         <div class="lang-switcher" style="scale:.9">
-          <button class="lang-btn" onclick="setMatrixLang('ru',this)" id="mlang-ru">RU</button>
-          <button class="lang-btn active" onclick="setMatrixLang('en',this)" id="mlang-en">EN</button>
+          <button class="lang-btn active" onclick="setMatrixLang('ru',this)" id="mlang-ru">RU</button>
+          <button class="lang-btn" onclick="setMatrixLang('en',this)" id="mlang-en">EN</button>
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-generate" onclick="generateMatrix('${r.id}')" ${hasMatrix?'style="display:none"':''}>✦ Сгенерировать матрицу</button>
-      <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>Скопировать текст</button>
-      <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>Редактировать</button>
-      <button class="btn" id="btn-save-edit" onclick="saveEdit('${r.id}')" style="display:none">Сохранить правки</button>
+      <button class="btn btn-primary" id="btn-generate" onclick="generateMatrix('${r.id}')" ${hasMatrix?'style="display:none"':''}>${t('btn_generate')}</button>
+      <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>${t('btn_copy')}</button>
+      <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>${t('btn_edit')}</button>
+      <button class="btn" id="btn-save-edit" onclick="saveEdit('${r.id}')" style="display:none">${t('btn_save_edit')}</button>
       <button class="btn btn-primary ml-auto" id="btn-send" onclick="sendEmail('${r.id}')" ${!hasMatrix||isSent?'style="display:none"':''}>Отправить на почту →</button>
     </div>
   `;
@@ -1662,7 +1863,7 @@ function toggleEdit() {
   editMode = !editMode;
   document.getElementById('matrix-text').classList.toggle('visible', !editMode);
   document.getElementById('matrix-edit').classList.toggle('visible', editMode);
-  document.getElementById('btn-edit').textContent = editMode ? 'Отмена' : 'Редактировать';
+  document.getElementById('btn-edit').textContent = editMode ? (currentLang === 'en' ? 'Cancel' : 'Отмена') : t('btn_edit');
   document.getElementById('btn-save-edit').style.display = editMode ? '' : 'none';
 }
 
@@ -1673,12 +1874,12 @@ async function saveEdit(id) {
   currentRespondents[idx].matrix = text;
   document.getElementById('matrix-text').textContent = text;
   toggleEdit();
-  showToast('Сохранено ✓');
+  showToast(currentLang === 'en' ? 'Saved ✓' : 'Сохранено ✓');
 }
 
 function copyMatrix() {
   const text = document.getElementById('matrix-text').textContent;
-  navigator.clipboard.writeText(text).then(() => showToast('Скопировано в буфер ✓'));
+  navigator.clipboard.writeText(text).then(() => showToast(currentLang === 'en' ? 'Copied ✓' : 'Скопировано в буфер ✓'));
 }
 
 async function sendEmail(id) {
@@ -1688,7 +1889,7 @@ async function sendEmail(id) {
   const r = currentRespondents.find(x => String(x.id) === String(id));
   if (!r?.email) { showToast('У сотрудника нет email'); return; }
   const btn = document.getElementById('btn-send');
-  btn.textContent = 'Отправляю...';
+  btn.textContent = currentLang === 'en' ? 'Sending...' : 'Отправляю...';
   btn.disabled = true;
   try {
     emailjs.init({ publicKey: cfg.ejsPublicKey });
@@ -1700,7 +1901,7 @@ async function sendEmail(id) {
     currentRespondents[idx].status = 'sent';
     btn.style.display = 'none';
     document.getElementById('sent-badge').classList.add('visible');
-    showToast('Письмо отправлено на ' + r.email + ' ✓');
+    showToast(currentLang === 'en' ? 'Email sent to ' : 'Письмо отправлено на ' + r.email + ' ✓');
   } catch(e) {
     btn.textContent = 'Отправить на почту →';
     btn.disabled = false;
@@ -1910,7 +2111,7 @@ async function saveQuestion() {
   const role = document.getElementById('q-form-role').value;
   const textEn = document.getElementById('q-form-text-en').value.trim();
   const compEn = document.getElementById('q-form-comp-en').value.trim();
-  if (!comp || !text) { showToast('Заполни компетенцию и текст вопроса'); return; }
+  if (!comp || !text) { showToast(currentLang === 'en' ? 'Fill in competency and question text' : 'Заполни компетенцию и текст вопроса'); return; }
 
   showLoading('Сохраняем и переводим...');
   try {
@@ -1928,7 +2129,7 @@ async function saveQuestion() {
     allQuestions = Array.isArray(data) ? data : [];
     updateRoleFilter();
     renderQuestionList();
-    showToast('Вопрос сохранён ✓');
+    showToast(currentLang === 'en' ? 'Question saved ✓' : 'Вопрос сохранён ✓');
   } catch(e) {
     showToast('Ошибка: ' + e.message);
   } finally {
@@ -1945,7 +2146,7 @@ async function deleteQuestion(qId, idx) {
     allQuestions = Array.isArray(data) ? data : [];
     updateRoleFilter();
     renderQuestionList();
-    showToast('Вопрос удалён');
+    showToast(currentLang === 'en' ? 'Question deleted' : 'Вопрос удалён');
   } catch(e) {
     showToast('Ошибка: ' + e.message);
   } finally {
@@ -1996,7 +2197,7 @@ function renderStructureList() {
           <div style="font-size:12px;color:var(--text-2);margin-top:2px">${c.desc}</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-sm" onclick="openQuestionEditor('${c.cluster}')" style="font-size:12px">✎ Вопросы</button>
+          <button class="btn btn-sm" onclick="openQuestionEditor('${c.cluster}')" style="font-size:12px" id="btn-questions">✎ <span id="btn-questions-label">Вопросы</span></button>
   <button class="btn btn-sm" onclick="generateQuestionsForCluster('${c.cluster}','${c.name}','${c.desc}','')" style="font-size:12px;background:var(--accent-light);color:var(--accent);border-color:transparent">✦ Для всего кластера</button>
           ${!['smm','pr','content','performance','management'].includes(c.cluster) ? `<button class="btn btn-sm" onclick="deleteCluster('${c.cluster}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">✕</button>` : ''}
         </div>
