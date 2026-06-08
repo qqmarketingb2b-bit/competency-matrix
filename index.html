@@ -1057,7 +1057,7 @@ function renderRoleGrid() {
     const div = document.createElement('div');
     div.id = 'position-picker';
     div.style.cssText = 'display:none;margin-top:1.5rem';
-    div.innerHTML = '<div class="section-sep" style="margin-top:0">Теперь выбери свою должность</div><div id="position-grid" class="role-grid"></div>';
+    div.innerHTML = `<div class="section-sep" style="margin-top:0">${currentLang === 'en' ? 'Now select your position' : 'Теперь выбери свою должность'}</div><div id="position-grid" class="role-grid"></div>`;
     document.getElementById('role-grid').parentElement.insertBefore(div, document.getElementById('role-grid').nextSibling);
   }
 }
@@ -1237,7 +1237,7 @@ const T = {
     name_placeholder: 'Иван Петров',
     email_label: 'Рабочий email',
     months_label: 'Сколько месяцев ты в команде?',
-    position_label: 'Теперь выбери свою должность',
+    position_label: currentLang === 'en' ? 'Now select your position' : 'Теперь выбери свою должность',
     soft_sep: 'Soft skills — для всех',
     open_sep: 'Зоны роста',
     open_q1: 'Что тебе даётся легче всего в работе?',
@@ -1318,6 +1318,7 @@ const T = {
     admin_enter: 'Enter panel →',
     // Matrix generation
     generate_lang_label: 'Matrix language',
+    position_label: 'Now select your position',
     // Question editor
     situational_short: 'S',
     verification_short: 'V',
@@ -1626,7 +1627,14 @@ ${clusterLines}
 5. ПЛАН РАЗВИТИЯ
 3 конкретных шага на ближайшие 3–6 месяцев — что делать руководителю и что делать сотруднику.
 
-Пиши от лица руководителя, по-русски, конкретно и по делу. Без воды и шаблонных фраз.`;
+${matrixLang === 'en' ? `Write from the perspective of a marketing director. In English, specific and to the point. No filler phrases.
+
+Format:
+1. OVERALL PICTURE — one paragraph about this person as a specialist
+2. STRENGTHS — 3-4 competencies with examples from their answers
+3. GROWTH AREAS — 3-4 areas with gaps, constructive tone
+4. GRADE AND POTENTIAL — Junior/Middle/Senior/Lead with reasoning
+5. DEVELOPMENT PLAN — 3 concrete steps for next 3-6 months` : `Пиши от лица руководителя, по-русски, конкретно и по делу. Без воды и шаблонных фраз.`}`;
   try {
     const data = await gsPost({ action: 'generateMatrix', prompt });
     if (data.error) throw new Error(data.error);
