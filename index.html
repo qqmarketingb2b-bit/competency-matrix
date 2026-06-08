@@ -139,7 +139,7 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 .open-answer { font-size: 13px; color: var(--text); background: var(--bg); border-radius: 6px; padding: 8px 10px; margin: 4px 0 8px; font-style: italic; line-height: 1.6; }
 .matrix-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
 .matrix-placeholder { text-align: center; padding: 2rem; color: var(--text-3); font-size: 14px; }
-.matrix-text { font-size: 14px; line-height: 1.8; display: none; }
+.matrix-text { font-size: 14px; line-height: 1.8; display: none; overflow: visible; }
 .matrix-text.visible { display: block; }
 .matrix-edit { width: 100%; min-height: 220px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-family: 'Onest', sans-serif; font-size: 13px; line-height: 1.7; color: var(--text); outline: none; resize: vertical; display: none; }
 .matrix-edit.visible { display: block; }
@@ -2159,7 +2159,7 @@ function renderDetail(r) {
       <div class="answers-section-title">${CLUSTER_LABELS[cluster]||'Профессиональные'} компетенции</div>${clusterRows}
     </div>
     ${openSection ? `<div class="answers-section"><div class="answers-section-title">Открытые ответы</div>${openSection}</div>` : ''}
-    <div class="matrix-section">
+    <div class="matrix-section" style="overflow:visible">
       <div class="answers-section-title">${t('matrix_title')}</div>
       <div id="matrix-placeholder" class="matrix-placeholder" ${hasMatrix?'style="display:none"':''}>${t('matrix_placeholder')}</div>
       <div class="matrix-text ${hasMatrix?'visible':''}" id="matrix-text">${hasMatrix ? renderMatrixVisual(r.matrix) : ''}</div>
@@ -2333,8 +2333,8 @@ function renderMatrixVisual(text) {
 
   for (const line of lines) {
     const low = line.toLowerCase();
-    // Detect section headers - check for numbered sections like "1." "2." etc
-    const isHeader = /^\d+[.)\s]/.test(line) || line.length < 60;
+    // Detect section headers - only numbered lines at start (1. 2. 3. etc)
+    const isHeader = /^\d+[.)\s]/.test(line) && line.length < 80;
     if (isHeader) {
       if (low.includes('общая картина') || low.includes('overall picture') || low.includes('общий') || (/^1[.)]/i.test(line) && (low.includes('картин') || low.includes('уровн') || low.includes('picture') || low.includes('overall')))) {
         currentSection = 'overview'; continue;
