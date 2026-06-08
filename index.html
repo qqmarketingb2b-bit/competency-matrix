@@ -2662,10 +2662,14 @@ function renderQuestionList() {
       return qp === currentQProject;
     });
   }
-  // Filter by sub-admin allowed clusters
-  const allowedClusters = getSubAdminAllowedClusters();
-  if (allowedClusters) {
-    filtered = filtered.filter(q => allowedClusters.includes(q.cluster));
+  // Filter by sub-admin allowed projects AND clusters
+  if (currentAdminRole !== 'main') {
+    const access = currentAdminRole.projectAccess ||
+      [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }];
+    filtered = filtered.filter(q => {
+      const qProject = q.project || '1win_partners';
+      return access.some(a => a.project === qProject && a.clusters.includes(q.cluster));
+    });
   }
 
   const CLUSTER_LABELS = {smm:'SMM',pr:'PR',content:'Content',performance:'Performance',management:'Management'};
@@ -2758,10 +2762,14 @@ function editQuestion(idx) {
       return qp === currentQProject;
     });
   }
-  // Filter by sub-admin allowed clusters
-  const allowedClusters = getSubAdminAllowedClusters();
-  if (allowedClusters) {
-    filtered = filtered.filter(q => allowedClusters.includes(q.cluster));
+  // Filter by sub-admin allowed projects AND clusters
+  if (currentAdminRole !== 'main') {
+    const access = currentAdminRole.projectAccess ||
+      [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }];
+    filtered = filtered.filter(q => {
+      const qProject = q.project || '1win_partners';
+      return access.some(a => a.project === qProject && a.clusters.includes(q.cluster));
+    });
   }
   const q = filtered[idx];
   const realIdx = allQuestions.indexOf(q);
