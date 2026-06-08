@@ -139,7 +139,7 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 .open-answer { font-size: 13px; color: var(--text); background: var(--bg); border-radius: 6px; padding: 8px 10px; margin: 4px 0 8px; font-style: italic; line-height: 1.6; }
 .matrix-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
 .matrix-placeholder { text-align: center; padding: 2rem; color: var(--text-3); font-size: 14px; }
-.matrix-text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; display: none; }
+.matrix-text { font-size: 14px; line-height: 1.8; display: none; }
 .matrix-text.visible { display: block; }
 .matrix-edit { width: 100%; min-height: 220px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-family: 'Onest', sans-serif; font-size: 13px; line-height: 1.7; color: var(--text); outline: none; resize: vertical; display: none; }
 .matrix-edit.visible { display: block; }
@@ -169,6 +169,28 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
 .loading-text { font-size: 14px; color: var(--text-2); }
 
 /* TOAST */
+
+
+/* VISUAL MATRIX */
+.matrix-visual { display: flex; flex-direction: column; gap: 16px; }
+.matrix-section-block { background: var(--bg); border-radius: var(--radius-sm); padding: 1rem 1.25rem; }
+.matrix-section-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: .75rem; }
+.matrix-section-label.overview { color: #7B1FD4; }
+.matrix-section-label.strengths { color: #2D6A4F; }
+.matrix-section-label.growth { color: #8B4513; }
+.matrix-section-label.grade { color: #1D4E89; }
+.matrix-section-label.plan { color: #4A4A4A; }
+.matrix-section-content { font-size: 14px; color: var(--text); line-height: 1.75; }
+.matrix-grade-badge { display: inline-block; font-size: 13px; font-weight: 700; padding: 5px 16px; border-radius: 20px; margin-bottom: 8px; }
+.grade-junior { background: #FFF3E0; color: #E65100; }
+.grade-middle { background: #E3F2FD; color: #1565C0; }
+.grade-senior { background: #E8F5E9; color: #2E7D32; }
+.grade-lead { background: #F3E5F5; color: #6A1B9A; }
+.matrix-point { display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start; }
+.matrix-point-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.matrix-point-num.strength { background: #EAF2EC; color: #2D6A4F; }
+.matrix-point-num.growth-n { background: #FDF0E8; color: #8B4513; }
+.matrix-point-num.plan-n { background: #F2EAFD; color: #7B1FD4; }
 
 /* LANG SWITCHER */
 .lang-switcher { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
@@ -1658,9 +1680,7 @@ function renderAdminPanel() {
   const total = currentRespondents.length;
   const generated = currentRespondents.filter(r => r.status === 'generated' || r.status === 'sent').length;
   const sent = currentRespondents.filter(r => r.status === 'sent').length;
-  const clusters = {};
-  currentRespondents.forEach(r => { const c = r.role?.cluster||'other'; clusters[c]=(clusters[c]||0)+1; });
-  const top = Object.entries(clusters).sort((a,b)=>b[1]-a[1])[0];
+
   document.getElementById('admin-stats').innerHTML = `
     <div class="stat-card" onclick="showStatModal('all')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
       <div class="stat-num">${total}</div>
@@ -1677,10 +1697,7 @@ function renderAdminPanel() {
       <div class="stat-label">${t('stat_sent')}</div>
       <div style="font-size:11px;color:#9521FE;margin-top:6px">${t('stat_view')}</div>
     </div>
-    <div class="stat-card" style="cursor:default">
-      <div class="stat-num">${top ? CLUSTER_LABELS[top[0]]||top[0] : '—'}</div>
-      <div class="stat-label">${t('stat_top_cluster')}</div>
-    </div>
+
   `;
   const statusLabels = {
     new: currentLang === 'en' ? 'New' : 'Новый',
@@ -1761,7 +1778,7 @@ function renderDetail(r) {
     <div class="matrix-section">
       <div class="answers-section-title">${t('matrix_title')}</div>
       <div id="matrix-placeholder" class="matrix-placeholder" ${hasMatrix?'style="display:none"':''}>${t('matrix_placeholder')}</div>
-      <div class="matrix-text ${hasMatrix?'visible':''}" id="matrix-text">${r.matrix||''}</div>
+      <div class="matrix-text ${hasMatrix?'visible':''}" id="matrix-text">${hasMatrix ? renderMatrixVisual(r.matrix) : ''}</div>
       <textarea class="matrix-edit" id="matrix-edit">${r.matrix||''}</textarea>
     </div>
     <div class="action-bar">
@@ -1846,7 +1863,7 @@ Format:
     currentRespondents[idx].status = 'generated';
     document.getElementById('gen-indicator').classList.remove('visible');
     document.getElementById('matrix-placeholder').style.display = 'none';
-    document.getElementById('matrix-text').textContent = text;
+    document.getElementById('matrix-text').innerHTML = renderMatrixVisual(text);
     document.getElementById('matrix-text').classList.add('visible');
     document.getElementById('matrix-edit').value = text;
     document.getElementById('btn-edit').style.display = '';
@@ -1878,7 +1895,7 @@ async function saveEdit(id) {
 }
 
 function copyMatrix() {
-  const text = document.getElementById('matrix-text').textContent;
+  const text = document.getElementById('matrix-edit').value || document.getElementById('matrix-text').innerText;
   navigator.clipboard.writeText(text).then(() => showToast(currentLang === 'en' ? 'Copied ✓' : 'Скопировано в буфер ✓'));
 }
 
@@ -1907,6 +1924,144 @@ async function sendEmail(id) {
     btn.disabled = false;
     showToast('Ошибка: ' + (e.text||e.message));
   }
+}
+
+
+// ─── VISUAL MATRIX RENDERER ───
+function renderMatrixVisual(text) {
+  if (!text) return '';
+  const lang = currentLang;
+
+  // Parse sections from text
+  const sections = {
+    overview: '',
+    strengths: [],
+    growth: [],
+    grade: '',
+    plan: []
+  };
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let currentSection = null;
+
+  for (const line of lines) {
+    const low = line.toLowerCase();
+    // Detect section headers
+    if (low.includes('общая картина') || low.includes('общий уровень') || low.includes('overall picture') || low.includes('overall level') || (low.startsWith('1.') && (low.includes('уровень') || low.includes('картина') || low.includes('overall') || low.includes('picture')))) {
+      currentSection = 'overview'; continue;
+    }
+    if (low.includes('сильные стороны') || low.includes('strengths') || (low.startsWith('2.') && (low.includes('сильн') || low.includes('strength')))) {
+      currentSection = 'strengths'; continue;
+    }
+    if (low.includes('зоны роста') || low.includes('growth areas') || low.includes('growth zone') || (low.startsWith('3.') && (low.includes('рост') || low.includes('growth') || low.includes('зон')))) {
+      currentSection = 'growth'; continue;
+    }
+    if (low.includes('грейд') || low.includes('потенциал') || low.includes('grade') || low.includes('potential') || (low.startsWith('4.') && (low.includes('грейд') || low.includes('grade') || low.includes('потенц')))) {
+      currentSection = 'grade'; continue;
+    }
+    if (low.includes('план развития') || low.includes('development plan') || low.includes('план') || (low.startsWith('5.') && (low.includes('план') || low.includes('plan') || low.includes('развит')))) {
+      currentSection = 'plan'; continue;
+    }
+
+    // Skip empty section markers
+    if (!currentSection || line.length < 3) continue;
+
+    // Add content to sections
+    const cleanLine = line.replace(/^[-–—•*·]\s*/, '').replace(/^\d+[.)]\s*/, '');
+    if (!cleanLine) continue;
+
+    if (currentSection === 'overview') {
+      sections.overview += (sections.overview ? ' ' : '') + cleanLine;
+    } else if (currentSection === 'strengths') {
+      if (cleanLine.length > 10) sections.strengths.push(cleanLine);
+    } else if (currentSection === 'growth') {
+      if (cleanLine.length > 10) sections.growth.push(cleanLine);
+    } else if (currentSection === 'grade') {
+      sections.grade += (sections.grade ? ' ' : '') + cleanLine;
+    } else if (currentSection === 'plan') {
+      if (cleanLine.length > 10) sections.plan.push(cleanLine);
+    }
+  }
+
+  // If parsing failed, fallback to plain text
+  const hasContent = sections.overview || sections.strengths.length || sections.grade;
+  if (!hasContent) {
+    return `<div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${text}</div>`;
+  }
+
+  // Detect grade
+  let gradeBadge = '';
+  const gradeText = (sections.grade + ' ' + sections.overview).toLowerCase();
+  if (gradeText.includes('lead') || gradeText.includes('лид')) {
+    gradeBadge = `<span class="matrix-grade-badge grade-lead">Lead</span>`;
+  } else if (gradeText.includes('senior') || gradeText.includes('сениор') || gradeText.includes('синьор')) {
+    gradeBadge = `<span class="matrix-grade-badge grade-senior">Senior</span>`;
+  } else if (gradeText.includes('middle') || gradeText.includes('мидл')) {
+    gradeBadge = `<span class="matrix-grade-badge grade-middle">Middle</span>`;
+  } else if (gradeText.includes('junior') || gradeText.includes('джуниор') || gradeText.includes('джун')) {
+    gradeBadge = `<span class="matrix-grade-badge grade-junior">Junior</span>`;
+  }
+
+  const L = lang === 'en';
+  let html = '<div class="matrix-visual">';
+
+  // Overview
+  if (sections.overview) {
+    html += `<div class="matrix-section-block">
+      <div class="matrix-section-label overview">${L ? '📊 Overall picture' : '📊 Общая картина'}</div>
+      <div class="matrix-section-content">${sections.overview}</div>
+    </div>`;
+  }
+
+  // Strengths
+  if (sections.strengths.length) {
+    html += `<div class="matrix-section-block">
+      <div class="matrix-section-label strengths">${L ? '✦ Strengths' : '✦ Сильные стороны'}</div>
+      <div class="matrix-section-content">
+        ${sections.strengths.map((s,i) => `<div class="matrix-point">
+          <span class="matrix-point-num strength">${i+1}</span>
+          <span>${s}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Growth
+  if (sections.growth.length) {
+    html += `<div class="matrix-section-block">
+      <div class="matrix-section-label growth">${L ? '↑ Growth areas' : '↑ Зоны роста'}</div>
+      <div class="matrix-section-content">
+        ${sections.growth.map((s,i) => `<div class="matrix-point">
+          <span class="matrix-point-num growth-n">${i+1}</span>
+          <span>${s}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Grade
+  if (sections.grade) {
+    html += `<div class="matrix-section-block">
+      <div class="matrix-section-label grade">${L ? '◈ Grade & potential' : '◈ Грейд и потенциал'}</div>
+      <div class="matrix-section-content">${gradeBadge ? gradeBadge + '<br>' : ''}${sections.grade}</div>
+    </div>`;
+  }
+
+  // Plan
+  if (sections.plan.length) {
+    html += `<div class="matrix-section-block">
+      <div class="matrix-section-label plan">${L ? '→ Development plan' : '→ План развития'}</div>
+      <div class="matrix-section-content">
+        ${sections.plan.map((s,i) => `<div class="matrix-point">
+          <span class="matrix-point-num plan-n">${i+1}</span>
+          <span>${s}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+  return html;
 }
 
 // ─── LOADING / TOAST ───
