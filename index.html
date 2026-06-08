@@ -539,25 +539,45 @@ function ok(data) {
 
     <!-- Add/Edit form -->
     <div id="prompt-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
-      <div style="font-size:14px;font-weight:500;margin-bottom:1rem" id="prompt-form-title">Новый промпт</div>
-      <div class="field-group">
-        <label class="field-label">Название промпта</label>
-        <input class="field-input" id="pf-name" placeholder="Например: Для 1-on-1 встречи">
+      <div style="font-size:14px;font-weight:500;margin-bottom:1.25rem" id="prompt-form-title">Новый промпт</div>
+
+      <!-- Step 1: Context input -->
+      <div id="pf-step1">
+        <div class="field-group">
+          <label class="field-label">Название промпта</label>
+          <input class="field-input" id="pf-name" placeholder="Например: Для quarterly review с Head of SMM">
+        </div>
+        <div class="field-group" style="margin-bottom:1rem">
+          <label class="field-label">Для кого и зачем этот промпт?</label>
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;line-height:1.6">Опиши в свободной форме — Claude сгенерирует готовый промпт с правильной структурой и переменными.</div>
+          <textarea class="field-input" id="pf-context" rows="4" style="resize:vertical" placeholder="Например: Промпт для Head of SMM перед квартальным ревью. Нужно оценить стратегическое мышление и готовность к повышению. Особый акцент на управленческие компетенции."></textarea>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="generatePromptWithClaude()" id="btn-gen-prompt">✦ Сгенерировать промпт</button>
+          <button class="btn" onclick="document.getElementById('prompt-form').style.display='none'">Отмена</button>
+        </div>
+        <div id="pf-generating" style="display:none;margin-top:1rem;display:none;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
+          <div class="dot-pulse"><span></span><span></span><span></span></div>
+          Claude генерирует промпт...
+        </div>
       </div>
-      <div class="field-group">
-        <label class="field-label">Описание (необязательно)</label>
-        <input class="field-input" id="pf-desc" placeholder="Когда использовать этот промпт">
-      </div>
-      <div class="field-group" style="margin-bottom:1rem">
-        <label class="field-label">Текст промпта</label>
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Используй переменные: <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{name}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{position}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{cluster}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{months}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{soft_skills}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{professional_answers}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{open_answers}</code></div>
-        <textarea class="field-input" id="pf-text" rows="10" style="resize:vertical;font-family:monospace;font-size:13px" placeholder="Напиши промпт..."></textarea>
-      </div>
-      <input type="hidden" id="pf-id">
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" onclick="savePrompt()" id="btn-save-prompt">Сохранить</button>
-        <button class="btn" onclick="document.getElementById('prompt-form').style.display='none'" id="btn-cancel-prompt">Отмена</button>
-        <button class="btn btn-sm" onclick="insertDefaultPrompt()" style="margin-left:auto;font-size:12px" id="btn-insert-default">← Вставить дефолтный промпт</button>
+
+      <!-- Step 2: Edit generated prompt -->
+      <div id="pf-step2" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;background:var(--accent-light);border-radius:var(--radius-sm);padding:.75rem 1rem">
+          <span style="font-size:13px;color:var(--accent)">✓ Промпт сгенерирован — проверь и при необходимости отредактируй</span>
+        </div>
+        <div class="field-group" style="margin-bottom:1rem">
+          <label class="field-label">Текст промпта</label>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Переменные: <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{name}</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{position}</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{cluster}</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{months}</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{soft_skills}</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{professional_answers}</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">{open_answers}</code></div>
+          <textarea class="field-input" id="pf-text" rows="12" style="resize:vertical;font-family:monospace;font-size:12px;line-height:1.6"></textarea>
+        </div>
+        <input type="hidden" id="pf-id">
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="savePrompt()" id="btn-save-prompt">Сохранить промпт</button>
+          <button class="btn" onclick="showPromptStep1()">← Изменить вводные</button>
+          <button class="btn" onclick="document.getElementById('prompt-form').style.display='none'" style="margin-left:auto">Отмена</button>
+        </div>
       </div>
     </div>
 
@@ -2456,15 +2476,64 @@ function setActivePrompt(id) {
 function showAddPromptForm() {
   document.getElementById('prompt-form-title').textContent = currentLang === 'en' ? 'New prompt' : 'Новый промпт';
   document.getElementById('pf-name').value = '';
-  document.getElementById('pf-desc').value = '';
+  document.getElementById('pf-context') && (document.getElementById('pf-context').value = '');
   document.getElementById('pf-text').value = '';
   document.getElementById('pf-id').value = '';
+  showPromptStep1();
   document.getElementById('prompt-form').style.display = 'block';
   document.getElementById('prompt-form').scrollIntoView({behavior:'smooth'});
 }
 
+function showPromptStep1() {
+  document.getElementById('pf-step1').style.display = 'block';
+  document.getElementById('pf-step2').style.display = 'none';
+}
+
+function showPromptStep2() {
+  document.getElementById('pf-step1').style.display = 'none';
+  document.getElementById('pf-step2').style.display = 'block';
+}
+
+async function generatePromptWithClaude() {
+  const name = document.getElementById('pf-name').value.trim();
+  const context = document.getElementById('pf-context').value.trim();
+  if (!name) { showToast(currentLang === 'en' ? 'Enter prompt name' : 'Введи название промпта'); return; }
+  if (!context) { showToast(currentLang === 'en' ? 'Describe who this prompt is for' : 'Опиши для кого этот промпт'); return; }
+
+  const genBtn = document.getElementById('btn-gen-prompt');
+  genBtn.disabled = true;
+  genBtn.textContent = currentLang === 'en' ? 'Generating...' : 'Генерирую...';
+
+  const metaPrompt = `Ты эксперт по оценке компетенций в B2B iGaming маркетинге. Создай промпт для генерации матрицы компетенций сотрудника.
+
+Запрос администратора: ${context}
+Название промпта: ${name}
+
+Создай готовый промпт который:
+1. Обращается к Claude от имени нужной роли (исходя из запроса)
+2. Использует переменные: {name}, {position}, {cluster}, {months}, {soft_skills}, {professional_answers}, {open_answers}
+3. Даёт Claude чёткие инструкции что анализировать и на что обращать особое внимание
+4. Содержит структуру ответа с секциями: 1. ОБЩАЯ КАРТИНА, 2. СИЛЬНЫЕ СТОРОНЫ, 3. ЗОНЫ РОСТА, 4. ГРЕЙД И ПОТЕНЦИАЛ, 5. ПЛАН РАЗВИТИЯ
+5. Адаптирует акценты и вопросы под конкретную задачу из запроса
+
+Верни ТОЛЬКО текст промпта, без пояснений и комментариев.`;
+
+  try {
+    const data = await gsPost({ action: 'generateMatrix', prompt: metaPrompt });
+    if (data.error) throw new Error(data.error);
+    document.getElementById('pf-text').value = data.text.trim();
+    showPromptStep2();
+  } catch(e) {
+    showToast(currentLang === 'en' ? 'Generation error: ' + e.message : 'Ошибка генерации: ' + e.message);
+  } finally {
+    genBtn.disabled = false;
+    genBtn.textContent = currentLang === 'en' ? '✦ Generate prompt' : '✦ Сгенерировать промпт';
+  }
+}
+
 function insertDefaultPrompt() {
   document.getElementById('pf-text').value = currentLang === 'en' ? DEFAULT_PROMPT_EN : DEFAULT_PROMPT_RU;
+  showPromptStep2();
 }
 
 function editPrompt(id) {
@@ -2472,9 +2541,9 @@ function editPrompt(id) {
   if (!p) return;
   document.getElementById('prompt-form-title').textContent = currentLang === 'en' ? 'Edit prompt' : 'Редактировать промпт';
   document.getElementById('pf-name').value = p.name;
-  document.getElementById('pf-desc').value = p.desc || '';
   document.getElementById('pf-text').value = p.text;
   document.getElementById('pf-id').value = p.id;
+  showPromptStep2();
   document.getElementById('prompt-form').style.display = 'block';
   document.getElementById('prompt-form').scrollIntoView({behavior:'smooth'});
 }
