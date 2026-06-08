@@ -353,9 +353,18 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
   </div>
   <div class="admin-body">
     <div class="admin-stats" id="admin-stats"></div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;" id="admin-employees-bar">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+      <span class="section-title-sm" style="margin:0" id="employees-label">Сотрудники</span>
+      <select id="project-filter" onchange="applyProjectFilter()" class="field-input" style="max-width:180px;padding:6px 10px;font-size:13px">
+        <option value="">Все проекты</option>
+        ${PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm" onclick="loadAndRenderPanel()" style="margin-left:auto" id="btn-refresh-panel">↻ Обновить</button>
+    </div>
+    <div style="display:none" id="admin-employees-bar">
       <span class="section-title-sm" style="margin:0" id="employees-label">Сотрудники</span>
       <button class="btn btn-sm" onclick="loadAndRenderPanel()" style="margin-left:auto" id="btn-refresh-panel">↻ Обновить</button>
+    </div>
     </div>
     <div class="resp-list" id="resp-list">
       <div class="empty-state">Загрузка...</div>
@@ -776,6 +785,12 @@ function ok(data) {
           </div>
         </div>
       </div>
+      <div class="field-group">
+        <label class="field-label">Проект</label>
+        <select class="field-input" id="sa-project">
+          ${PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+      </div>
       <div class="field-group" style="margin-bottom:1rem">
         <label class="field-label">Доступ к кластерам</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="sa-clusters-picker">
@@ -817,6 +832,14 @@ const SOFT_QUESTIONS = [
   'Я эффективно коммуницирую внутри команды',
   'Я быстро адаптируюсь к изменениям'
 ];
+const PROJECTS = [
+  { id: '1win_partners', name: '1win Partners' },
+  { id: 'fame', name: 'FAME' },
+  { id: 'performance_lab', name: 'Performance Lab' },
+  { id: 'mellAff', name: 'MellAff' },
+  { id: 'nda', name: 'NDA' },
+];
+
 const CLUSTERS = [
   { name:'SMM', cluster:'smm', desc:'Контент, платформы, аналитика', desc_en:'Content, platforms, analytics',
     roles:['TL SMM','SMM Manager','SMM & Media Aff','Content Producer'] },
@@ -945,6 +968,7 @@ const cfg = {
 
 // ─── STATE ───
 let currentUser = {};
+let selectedProject = null;
 let currentRespondents = [];
 let editMode = false;
 let currentDetailId = null;
@@ -1160,7 +1184,9 @@ async function initSurvey() {
   ['inp-name','inp-email','inp-months','open-1','open-2','open-3'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  selectedProject = null;
   renderSoftQuestions();
+  renderProjectGrid();
   renderRoleGrid();
   goStep(1);
   setTimeout(() => {
@@ -1193,6 +1219,26 @@ function renderSoftQuestions() {
       </div>
       <div class="scale-hint"><span>${t('scale_novice')}</span><span>${t('scale_expert')}</span></div>
     </div>`).join('');
+}
+
+function renderProjectGrid() {
+  const grid = document.getElementById('project-grid');
+  if (!grid) return;
+  grid.innerHTML = PROJECTS.map((p,i) => `
+    <div class="role-card" id="project-card-${i}" onclick="selectProject(${i})" style="padding:1.25rem 1.5rem">
+      <div class="role-name" style="font-size:16px;font-weight:600">${p.name}</div>
+    </div>`).join('');
+  // Restore selection
+  if (selectedProject) {
+    const idx = PROJECTS.findIndex(p => p.id === selectedProject.id);
+    if (idx >= 0) document.getElementById('project-card-'+idx)?.classList.add('selected');
+  }
+}
+
+function selectProject(i) {
+  document.querySelectorAll('#project-grid .role-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('project-card-'+i).classList.add('selected');
+  selectedProject = PROJECTS[i];
 }
 
 function renderRoleGrid() {
@@ -1255,7 +1301,8 @@ async function renderClusterQuestions() {
     const data = await gsPost({
       action: 'getQuestions',
       cluster: currentUser.role.cluster,
-      role: currentUser.position || currentUser.role.name
+      role: currentUser.position || currentUser.role.name,
+      project: currentUser.project?.id || '1win_partners'
     });
     if (Array.isArray(data) && data.length > 0) {
       qs = data.map(q => ({ type: q.type, comp: q.comp, text: q.text, text_en: q.text_en||'', id: q.id }));
@@ -1339,6 +1386,8 @@ async function submitSurvey() {
     name: currentUser.name,
     email: currentUser.email,
     position: currentUser.position || '',
+    project: currentUser.project?.id || '1win_partners',
+    projectName: currentUser.project?.name || '1win Partners',
     role: currentUser.role,
     months: currentUser.months,
     submittedAt: new Date().toLocaleDateString('ru-RU'),
@@ -1827,6 +1876,8 @@ function parseRow(r) {
     name: r.name,
     email: r.email,
     position: r.position || '',
+    project: r.project || '1win_partners',
+    projectName: r.projectName || '1win Partners',
     role: { name: r.role, cluster: r.cluster },
     months: r.months,
     submittedAt: r.submittedAt,
@@ -1880,7 +1931,7 @@ function renderAdminPanel() {
       <div class="resp-avatar">${(r.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="resp-info">
         <div class="resp-name">${r.name}</div>
-        <div class="resp-meta">${r.position || r.role?.name || '—'} · ${CLUSTER_LABELS[r.role?.cluster]||''} · ${r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('ru-RU') : ''}</div>
+        <div class="resp-meta">${r.projectName||''} · ${r.position || r.role?.name || '—'} · ${CLUSTER_LABELS[r.role?.cluster]||''} · ${r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('ru-RU') : ''}</div>
       </div>
       <span class="resp-status ${statusClasses[r.status]||'status-new'}">${statusLabels[r.status]||'Новый'}</span>
       <span style="color:var(--text-3);font-size:16px">›</span>
@@ -1930,7 +1981,7 @@ function renderDetail(r) {
   const hasMatrix = !!r.matrix;
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-name">${r.name}</div>
-    <div class="detail-role">${r.position ? r.position + ' · ' : ''}${CLUSTER_LABELS[cluster]||''} · ${r.months||'?'} мес. в команде ${r.email ? '· '+r.email : ''}</div>
+    <div class="detail-role">${r.projectName ? '<span style="background:#F2EAFD;color:#7B1FD4;padding:2px 8px;border-radius:10px;font-size:12px;margin-right:6px">' + r.projectName + '</span>' : ''}${r.position ? r.position + ' · ' : ''}${CLUSTER_LABELS[cluster]||''} · ${r.months||'?'} мес. ${r.email ? '· '+r.email : ''}</div>
     <div class="answers-section">
       <div class="answers-section-title">${t('soft_sep')}</div>${softRows}
     </div>
@@ -2487,7 +2538,7 @@ function renderSubAdminsList() {
       <div style="flex:1">
         <div style="font-size:14px;font-weight:500">${sa.name}</div>
         <div style="font-size:12px;color:var(--text-2);margin-top:2px">
-          Кластеры: ${sa.clusters.map(c => CLUSTER_LABELS[c]||c).join(', ')}
+          ${PROJECTS.find(p=>p.id===sa.project)?.name || '1win Partners'} · ${sa.clusters.map(c => CLUSTER_LABELS[c]||c).join(', ')}
         </div>
         <div style="font-size:11px;color:var(--text-3);margin-top:2px;font-family:monospace">
           Пароль: ${sa.password}
@@ -2527,6 +2578,8 @@ function editSubAdmin(id) {
   document.getElementById('sa-name').value = sa.name;
   document.getElementById('sa-password').value = sa.password;
   document.getElementById('sa-id').value = sa.id;
+  const saProjectEl = document.getElementById('sa-project');
+  if (saProjectEl) saProjectEl.value = sa.project || '1win_partners';
   document.querySelectorAll('#sa-clusters-picker input[type=checkbox]').forEach(cb => {
     cb.checked = sa.clusters.includes(cb.value);
   });
@@ -2539,6 +2592,7 @@ function saveSubAdmin() {
   const password = document.getElementById('sa-password').value.trim();
   const id = document.getElementById('sa-id').value;
   const clusters = [...document.querySelectorAll('#sa-clusters-picker input:checked')].map(cb => cb.value);
+  const project = document.getElementById('sa-project')?.value || '1win_partners';
   if (!name || !password) { showToast('Заполни имя и пароль'); return; }
   if (!clusters.length) { showToast('Выбери хотя бы один кластер'); return; }
   // Check password not taken
@@ -2548,9 +2602,9 @@ function saveSubAdmin() {
   }
   if (id) {
     const idx = subAdmins.findIndex(a => a.id === id);
-    if (idx >= 0) subAdmins[idx] = { id, name, password, clusters };
+    if (idx >= 0) subAdmins[idx] = { id, name, password, clusters, project };
   } else {
-    subAdmins.push({ id: 'sa_' + Date.now(), name, password, clusters });
+    subAdmins.push({ id: 'sa_' + Date.now(), name, password, clusters, project });
   }
   saveSubAdminsLocal();
   document.getElementById('subadmin-form').style.display = 'none';
@@ -2567,10 +2621,29 @@ function deleteSubAdmin(id) {
 }
 
 // Filter respondents by sub-admin clusters
+let activeProjectFilter = '';
+
+function applyProjectFilter() {
+  activeProjectFilter = document.getElementById('project-filter')?.value || '';
+  renderAdminPanel();
+}
+
 function getFilteredRespondents() {
-  if (currentAdminRole === 'main') return currentRespondents;
-  const allowed = currentAdminRole.clusters || [];
-  return currentRespondents.filter(r => allowed.includes(r.role?.cluster));
+  let result = currentRespondents;
+  // Filter by sub-admin project and clusters
+  if (currentAdminRole !== 'main') {
+    const allowedProject = currentAdminRole.project;
+    const allowedClusters = currentAdminRole.clusters || [];
+    result = result.filter(r =>
+      (!allowedProject || r.project === allowedProject) &&
+      allowedClusters.includes(r.role?.cluster)
+    );
+  }
+  // Apply project filter from dropdown
+  if (activeProjectFilter) {
+    result = result.filter(r => r.project === activeProjectFilter);
+  }
+  return result;
 }
 
 // Filter prompts by admin role
