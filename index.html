@@ -521,6 +521,50 @@ function ok(data) {
 
 
 
+
+<!-- PROMPTS EDITOR -->
+<div id="admin-prompts" class="screen">
+  <div class="admin-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
+    <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px" id="prompts-screen-title">Промпты</span>
+    <span class="admin-badge" style="margin-left:8px">Администратор</span>
+    <button class="btn btn-sm btn-primary" onclick="showAddPromptForm()" style="margin-left:auto" id="btn-add-prompt">+ Добавить промпт</button>
+  </div>
+  <div style="max-width:860px;margin:0 auto;padding:2rem 1.5rem">
+
+    <div style="background:var(--info-light);border-radius:var(--radius-sm);padding:1rem 1.25rem;font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:1.5rem">
+      <strong style="color:var(--text)">Как это работает:</strong> создай промпт под конкретную задачу — например для 1-on-1 встречи, для повышения или для нового рынка. При генерации матрицы выбери нужный промпт из списка.
+    </div>
+
+    <!-- Add/Edit form -->
+    <div id="prompt-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:500;margin-bottom:1rem" id="prompt-form-title">Новый промпт</div>
+      <div class="field-group">
+        <label class="field-label">Название промпта</label>
+        <input class="field-input" id="pf-name" placeholder="Например: Для 1-on-1 встречи">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Описание (необязательно)</label>
+        <input class="field-input" id="pf-desc" placeholder="Когда использовать этот промпт">
+      </div>
+      <div class="field-group" style="margin-bottom:1rem">
+        <label class="field-label">Текст промпта</label>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Используй переменные: <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{name}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{position}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{cluster}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{months}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{soft_skills}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{professional_answers}</code> <code style="background:var(--bg);padding:1px 5px;border-radius:3px">{open_answers}</code></div>
+        <textarea class="field-input" id="pf-text" rows="10" style="resize:vertical;font-family:monospace;font-size:13px" placeholder="Напиши промпт..."></textarea>
+      </div>
+      <input type="hidden" id="pf-id">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="savePrompt()" id="btn-save-prompt">Сохранить</button>
+        <button class="btn" onclick="document.getElementById('prompt-form').style.display='none'" id="btn-cancel-prompt">Отмена</button>
+        <button class="btn btn-sm" onclick="insertDefaultPrompt()" style="margin-left:auto;font-size:12px" id="btn-insert-default">← Вставить дефолтный промпт</button>
+      </div>
+    </div>
+
+    <!-- Prompts list -->
+    <div id="prompts-list"></div>
+  </div>
+</div>
+
 <!-- STRUCTURE EDITOR -->
 <div id="admin-structure" class="screen">
   <div class="admin-header">
@@ -1791,6 +1835,11 @@ function renderDetail(r) {
           <button class="lang-btn" onclick="setMatrixLang('en',this)" id="mlang-en">EN</button>
         </div>
       </div>
+      <div id="active-prompt-indicator" style="${hasMatrix?'display:none':'display:flex'};align-items:center;gap:6px;font-size:12px;color:var(--text-3)">
+        <span>✦</span>
+        <span id="active-prompt-name">${activePromptId === 'default' ? (currentLang==='en'?'Default prompt':'Дефолтный промпт') : (customPrompts.find(p=>p.id===activePromptId)?.name || (currentLang==='en'?'Default prompt':'Дефолтный промпт'))}</span>
+        <button onclick="showScreen('admin-prompts');loadPrompts();renderPromptsList()" style="background:none;border:none;cursor:pointer;color:#9521FE;font-size:11px;padding:0 4px">${currentLang==='en'?'Change →':'Изменить →'}</button>
+      </div>
       <button class="btn btn-primary" id="btn-generate" onclick="generateMatrix('${r.id}')" ${hasMatrix?'style="display:none"':''}>${t('btn_generate')}</button>
       <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>${t('btn_copy')}</button>
       <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>${t('btn_edit')}</button>
@@ -1807,52 +1856,20 @@ async function generateMatrix(id) {
   document.getElementById('btn-generate').style.display = 'none';
   document.getElementById('gen-indicator').classList.add('visible');
   const cluster = r.role?.cluster;
-  const qs = cluster ? CLUSTER_QUESTIONS[cluster] : [];
+  const qs = (r.loadedQuestions || CLUSTER_QUESTIONS[cluster] || []);
   const softLines = SOFT_QUESTIONS.map((q,i) => `- ${q}: ${r.softAnswers[i]||'нет'}/4`).join('\n');
-  const clusterLines = qs.map((q,i) => `- ${q}: ${r.clusterAnswers[i]||'нет'}/4`).join('\n');
-  const prompt = `Ты опытный руководитель отдела маркетинга в B2B iGaming компании. На основе самооценки сотрудника составь практическую матрицу компетенций — не для HR, а для себя как руководителя: чтобы понять на что способен человек, где у него пробелы и как его развивать внутри команды.
-
-Сотрудник: ${r.name}
-Должность: ${r.position || r.role?.name}
-Направление: ${CLUSTER_LABELS[cluster]}
-Стаж в команде: ${r.months} мес.
-
-SOFT SKILLS (самооценка 1–4, где 4 — эксперт):
-${softLines}
-
-ПРОФЕССИОНАЛЬНЫЕ ВОПРОСЫ И ОТВЕТЫ СОТРУДНИКА:
-${clusterLines}
-
-ОТКРЫТЫЕ ОТВЕТЫ:
-- Что даётся легче всего: ${r.openAnswers[1]||'—'}
-- Хочет вырасти: ${r.openAnswers[2]||'—'}
-- Хочет освоить: ${r.openAnswers[3]||'—'}
-
-Составь матрицу в следующем формате:
-
-1. ОБЩАЯ КАРТИНА
-Один абзац — кто этот человек как специалист, его текущий уровень и ценность для B2B iGaming маркетинг команды.
-
-2. СИЛЬНЫЕ СТОРОНЫ
-3–4 конкретных компетенции где сотрудник уверен — с примерами из его ответов и пояснением почему это важно для команды.
-
-3. ЗОНЫ РОСТА
-3–4 области где есть пробелы — конкретно и без осуждения, с акцентом на то что это нормальный этап развития.
-
-4. ГРЕЙД И ПОТЕНЦИАЛ
-Текущий грейд (Junior / Middle / Senior / Lead) с обоснованием. Есть ли потенциал к росту и в каком направлении.
-
-5. ПЛАН РАЗВИТИЯ
-3 конкретных шага на ближайшие 3–6 месяцев — что делать руководителю и что делать сотруднику.
-
-${matrixLang === 'en' ? `Write from the perspective of a marketing director. In English, specific and to the point. No filler phrases.
-
-Format:
-1. OVERALL PICTURE — one paragraph about this person as a specialist
-2. STRENGTHS — 3-4 competencies with examples from their answers
-3. GROWTH AREAS — 3-4 areas with gaps, constructive tone
-4. GRADE AND POTENTIAL — Junior/Middle/Senior/Lead with reasoning
-5. DEVELOPMENT PLAN — 3 concrete steps for next 3-6 months` : `Пиши от лица руководителя, по-русски, конкретно и по делу. Без воды и шаблонных фраз.`}`;
+  const clusterLines = qs.map((q,i) => `- ${(q.text||q)}: ${r.clusterAnswers[i]||'нет ответа'}`).join('\n');
+  const openLines = `- ${currentLang==='en'?'Strengths':'Что даётся легче всего'}: ${r.openAnswers[1]||'—'}\n- ${currentLang==='en'?'Growth areas':'Зоны роста'}: ${r.openAnswers[2]||'—'}\n- ${currentLang==='en'?'Wants to learn':'Хочет освоить'}: ${r.openAnswers[3]||'—'}`;
+  const prompt = getActivePromptText({
+    name: r.name,
+    position: r.position || r.role?.name || '',
+    cluster: CLUSTER_LABELS[cluster] || cluster || '',
+    months: r.months || '',
+    softLines,
+    clusterLines,
+    openLines,
+    role: r.role
+  });
   try {
     const data = await gsPost({ action: 'generateMatrix', prompt });
     if (data.error) throw new Error(data.error);
@@ -2308,6 +2325,218 @@ async function deleteQuestion(qId, idx) {
     hideLoading();
   }
 }
+
+
+// ─── PROMPTS EDITOR ───
+const DEFAULT_PROMPT_RU = `Ты опытный руководитель отдела маркетинга в B2B iGaming компании. На основе самооценки сотрудника составь практическую матрицу компетенций — не для HR, а для себя как руководителя: чтобы понять на что способен человек, где у него пробелы и как его развивать внутри команды.
+
+Сотрудник: {name}
+Должность: {position}
+Направление: {cluster}
+Стаж в команде: {months} мес.
+
+SOFT SKILLS (самооценка 1–4, где 4 — эксперт):
+{soft_skills}
+
+ПРОФЕССИОНАЛЬНЫЕ ВОПРОСЫ И ОТВЕТЫ СОТРУДНИКА:
+{professional_answers}
+
+ОТКРЫТЫЕ ОТВЕТЫ:
+{open_answers}
+
+Составь матрицу в следующем формате:
+
+1. ОБЩАЯ КАРТИНА
+Один абзац — кто этот человек как специалист, его текущий уровень и ценность для B2B iGaming маркетинг команды.
+
+2. СИЛЬНЫЕ СТОРОНЫ
+3–4 конкретных компетенции где сотрудник уверен — с примерами из его ответов и пояснением почему это важно для команды.
+
+3. ЗОНЫ РОСТА
+3–4 области где есть пробелы — конкретно и без осуждения, с акцентом на то что это нормальный этап развития.
+
+4. ГРЕЙД И ПОТЕНЦИАЛ
+Текущий грейд (Junior / Middle / Senior / Lead) с обоснованием. Есть ли потенциал к росту и в каком направлении.
+
+5. ПЛАН РАЗВИТИЯ
+3 конкретных шага на ближайшие 3–6 месяцев — что делать руководителю и что делать сотруднику.
+
+Пиши от лица руководителя, по-русски, конкретно и по делу. Без воды и шаблонных фраз.`;
+
+const DEFAULT_PROMPT_EN = `You are an experienced marketing director at a B2B iGaming company. Based on the employee's self-assessment, create a practical competency matrix — not for HR, but for yourself as a manager: to understand what this person is capable of, where their gaps are, and how to develop them within the team.
+
+Employee: {name}
+Position: {position}
+Direction: {cluster}
+Time on team: {months} months
+
+SOFT SKILLS (self-assessment 1–4, where 4 = expert):
+{soft_skills}
+
+PROFESSIONAL QUESTIONS AND ANSWERS:
+{professional_answers}
+
+OPEN ANSWERS:
+{open_answers}
+
+Create the matrix in the following format:
+
+1. OVERALL PICTURE
+One paragraph — who this person is as a specialist, their current level and value to the B2B iGaming marketing team.
+
+2. STRENGTHS
+3–4 specific competencies where the employee is confident — with examples from their answers and explanation of why this matters for the team.
+
+3. GROWTH AREAS
+3–4 areas with gaps — specific and non-judgmental, emphasizing that this is a normal stage of development.
+
+4. GRADE AND POTENTIAL
+Current grade (Junior / Middle / Senior / Lead) with justification. Is there growth potential and in which direction.
+
+5. DEVELOPMENT PLAN
+3 concrete steps for the next 3–6 months — what the manager should do and what the employee should do.
+
+Write from the manager's perspective, in English, specific and to the point. No filler phrases.`;
+
+let customPrompts = [];
+let activePromptId = 'default';
+
+function loadPrompts() {
+  try {
+    const saved = localStorage.getItem('custom_prompts');
+    if (saved) customPrompts = JSON.parse(saved);
+  } catch(e) { customPrompts = []; }
+}
+
+function savePromptsLocal() {
+  localStorage.setItem('custom_prompts', JSON.stringify(customPrompts));
+}
+
+function openPromptsEditor() {
+  loadPrompts();
+  showScreen('admin-prompts');
+  renderPromptsList();
+}
+
+function renderPromptsList() {
+  const el = document.getElementById('prompts-list');
+  const allPrompts = [
+    { id: 'default', name: currentLang === 'en' ? 'Default (Marketing Director)' : 'Дефолтный (Руководитель маркетинга)', desc: currentLang === 'en' ? 'Standard matrix from marketing director perspective' : 'Стандартная матрица с точки зрения руководителя маркетинга', isDefault: true },
+    ...customPrompts
+  ];
+
+  el.innerHTML = allPrompts.map(p => `
+    <div style="background:var(--surface);border:${activePromptId === p.id ? '2px solid #9521FE' : '1px solid var(--border)'};border-radius:var(--radius);padding:1.25rem;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:14px;font-weight:500">${p.name}</span>
+          ${p.isDefault ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--accent-light);color:var(--accent)">${currentLang === 'en' ? 'Default' : 'Дефолт'}</span>` : ''}
+          ${activePromptId === p.id ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#F2EAFD;color:#7B1FD4">${currentLang === 'en' ? 'Active' : 'Активный'}</span>` : ''}
+        </div>
+        ${p.desc ? `<div style="font-size:13px;color:var(--text-2)">${p.desc}</div>` : ''}
+        ${!p.isDefault && p.text ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-family:monospace;background:var(--bg);padding:8px;border-radius:6px;max-height:60px;overflow:hidden">${p.text.slice(0,200)}...</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${activePromptId !== p.id ? `<button class="btn btn-sm btn-primary" onclick="setActivePrompt('${p.id}')" style="font-size:12px">${currentLang === 'en' ? 'Use' : 'Использовать'}</button>` : `<button class="btn btn-sm" style="font-size:12px;opacity:.5;cursor:default">${currentLang === 'en' ? 'Active' : 'Активный'}</button>`}
+        ${!p.isDefault ? `<button class="btn btn-sm" onclick="editPrompt('${p.id}')" style="font-size:12px">✎</button>` : ''}
+        ${!p.isDefault ? `<button class="btn btn-sm" onclick="deletePrompt('${p.id}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">✕</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function setActivePrompt(id) {
+  activePromptId = id;
+  localStorage.setItem('active_prompt_id', id);
+  renderPromptsList();
+  showToast(currentLang === 'en' ? 'Prompt selected ✓' : 'Промпт выбран ✓');
+}
+
+function showAddPromptForm() {
+  document.getElementById('prompt-form-title').textContent = currentLang === 'en' ? 'New prompt' : 'Новый промпт';
+  document.getElementById('pf-name').value = '';
+  document.getElementById('pf-desc').value = '';
+  document.getElementById('pf-text').value = '';
+  document.getElementById('pf-id').value = '';
+  document.getElementById('prompt-form').style.display = 'block';
+  document.getElementById('prompt-form').scrollIntoView({behavior:'smooth'});
+}
+
+function insertDefaultPrompt() {
+  document.getElementById('pf-text').value = currentLang === 'en' ? DEFAULT_PROMPT_EN : DEFAULT_PROMPT_RU;
+}
+
+function editPrompt(id) {
+  const p = customPrompts.find(p => p.id === id);
+  if (!p) return;
+  document.getElementById('prompt-form-title').textContent = currentLang === 'en' ? 'Edit prompt' : 'Редактировать промпт';
+  document.getElementById('pf-name').value = p.name;
+  document.getElementById('pf-desc').value = p.desc || '';
+  document.getElementById('pf-text').value = p.text;
+  document.getElementById('pf-id').value = p.id;
+  document.getElementById('prompt-form').style.display = 'block';
+  document.getElementById('prompt-form').scrollIntoView({behavior:'smooth'});
+}
+
+function savePrompt() {
+  const name = document.getElementById('pf-name').value.trim();
+  const desc = document.getElementById('pf-desc').value.trim();
+  const text = document.getElementById('pf-text').value.trim();
+  const id   = document.getElementById('pf-id').value;
+  if (!name || !text) {
+    showToast(currentLang === 'en' ? 'Fill in name and prompt text' : 'Заполни название и текст промпта');
+    return;
+  }
+  if (id) {
+    const idx = customPrompts.findIndex(p => p.id === id);
+    if (idx >= 0) customPrompts[idx] = { id, name, desc, text };
+  } else {
+    customPrompts.push({ id: 'p_' + Date.now(), name, desc, text });
+  }
+  savePromptsLocal();
+  document.getElementById('prompt-form').style.display = 'none';
+  renderPromptsList();
+  showToast(currentLang === 'en' ? 'Prompt saved ✓' : 'Промпт сохранён ✓');
+}
+
+function deletePrompt(id) {
+  if (!confirm(currentLang === 'en' ? 'Delete this prompt?' : 'Удалить этот промпт?')) return;
+  customPrompts = customPrompts.filter(p => p.id !== id);
+  if (activePromptId === id) activePromptId = 'default';
+  savePromptsLocal();
+  renderPromptsList();
+}
+
+function getActivePromptText(data) {
+  // Load active prompt id
+  const savedId = localStorage.getItem('active_prompt_id') || 'default';
+  activePromptId = savedId;
+
+  let template;
+  if (savedId === 'default') {
+    template = matrixLang === 'en' ? DEFAULT_PROMPT_EN : DEFAULT_PROMPT_RU;
+  } else {
+    const p = customPrompts.find(p => p.id === savedId);
+    template = p ? p.text : (matrixLang === 'en' ? DEFAULT_PROMPT_EN : DEFAULT_PROMPT_RU);
+  }
+
+  // Replace variables
+  return template
+    .replace(/{name}/g, data.name || '')
+    .replace(/{position}/g, data.position || data.role?.name || '')
+    .replace(/{cluster}/g, data.cluster || '')
+    .replace(/{months}/g, data.months || '')
+    .replace(/{soft_skills}/g, data.softLines || '')
+    .replace(/{professional_answers}/g, data.clusterLines || '')
+    .replace(/{open_answers}/g, data.openLines || '');
+}
+
+// Initialize active prompt on load
+(function() {
+  loadPrompts();
+  activePromptId = localStorage.getItem('active_prompt_id') || 'default';
+})();
+
 
 // ─── STRUCTURE EDITOR ───
 let currentStructure = []; // {cluster, name, desc, roles:[]}
