@@ -3339,6 +3339,9 @@ let reviewQuestions = [];  // [{type, comp, text, approved, comment}]
 
 async function openStructureEditor() {
   showScreen('admin-structure');
+  // Hide/show + Новый проект button based on role
+  const newProjBtn = document.querySelector('#admin-structure .admin-header .btn-primary');
+  if (newProjBtn) newProjBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
   showLoading('Загружаем структуру...');
   await loadProjects();
   hideLoading();
@@ -3372,9 +3375,10 @@ function renderStructureList() {
   const saAccess = isMain ? null : (currentAdminRole.projectAccess ||
     [{ project: currentAdminRole.project || '1win_partners', clusters: currentAdminRole.clusters || [] }]);
 
+  // Deduplicate - sub-admin may have multiple cluster entries for same project
   const visibleProjects = isMain ? PROJECTS : PROJECTS.filter(p =>
     saAccess.some(a => a.project === p.id)
-  );
+  ).filter((p, idx, arr) => arr.findIndex(x => x.id === p.id) === idx);
   el.innerHTML = visibleProjects.map((p) => {
     // For sub-admins: only show their clusters in this project
     const saProjectAccess = saAccess ? saAccess.find(a => a.project === p.id) : null;
@@ -3423,7 +3427,7 @@ function renderStructureList() {
       </div>` : '';
 
     const copyBtn = '';
-    const delBtn = !isMain ? `<button class="btn btn-sm" onclick="deleteProject('${p.id}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">Удалить проект</button>` : '';
+    const delBtn = isMain && !isMainProject ? `<button class="btn btn-sm" onclick="deleteProject('${p.id}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">Удалить проект</button>` : '';
 
     return `
       <div style="background:var(--surface);border:${isMain?'2px solid #9521FE':'1px solid var(--border)'};border-radius:var(--radius);margin-bottom:1.25rem;overflow:hidden">
