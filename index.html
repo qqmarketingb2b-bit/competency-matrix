@@ -613,16 +613,23 @@ function ok(data) {
           </select>
         </div>
       </div>
-      <div class="field-group" style="margin-bottom:12px">
-        <label class="field-label">Компетенция</label>
-        <input class="field-input" id="q-form-comp" placeholder="Например: Аналитика">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Компетенция (RU)</label>
+          <input class="field-input" id="q-form-comp" placeholder="Например: Аналитика">
+        </div>
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Компетенция (EN) <span style="color:var(--text-3);font-weight:400">— авто если пусто</span></label>
+          <input class="field-input" id="q-form-comp-en" placeholder="Auto-translated if empty...">
+        </div>
       </div>
       <div class="field-group" style="margin-bottom:10px">
-        <label class="field-label">Текст вопроса (RU)</label>
+        <label class="field-label">Текст вопроса (RU) <span style="color:var(--text-3);font-weight:400">— или напиши на EN и оставь пустым</span></label>
         <textarea class="field-input" id="q-form-text" rows="2" style="resize:vertical" placeholder="Как ты обычно..."></textarea>
       </div>
       <div class="field-group" style="margin-bottom:1rem">
-        <label class="field-label">Текст вопроса (EN) <span style="color:var(--text-3);font-weight:400">— оставь пустым для автоперевода</span></label>
+        <label class="field-label">Текст вопроса (EN) <span style="color:var(--text-3);font-weight:400">— авто если пусто</span></label>
         <textarea class="field-input" id="q-form-text-en" rows="2" style="resize:vertical" placeholder="Auto-translated if empty..."></textarea>
       </div>
       <input type="hidden" id="q-form-id">
@@ -1091,7 +1098,7 @@ async function renderClusterQuestions() {
   if (!currentUser.role) return;
   const clusterTitleSuffix = currentLang === 'en' ? ' — Professional competencies' : ' — профессиональные компетенции';
   document.getElementById('cluster-title').textContent = CLUSTER_LABELS[currentUser.role.cluster] + clusterTitleSuffix;
-  document.getElementById('cluster-questions').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-3)"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Загружаем вопросы...</div>';
+  document.getElementById('cluster-questions').innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-3)"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>${currentLang === 'en' ? 'Loading questions...' : 'Загружаем вопросы...'}</div>`;
   let qs;
   try {
     const data = await gsPost({
@@ -1259,6 +1266,7 @@ const T = {
     // Question editor
     situational_short: 'С',
     verification_short: 'П',
+    loading_questions: 'Загружаем вопросы...',
   },
   en: {
     logo: 'B2B | Marketing Team',
@@ -1313,6 +1321,7 @@ const T = {
     // Question editor
     situational_short: 'S',
     verification_short: 'V',
+    loading_questions: 'Loading questions...',
   }
 };
 
@@ -1849,6 +1858,7 @@ function showAddQuestionForm() {
   document.getElementById('q-form-comp').value = '';
   document.getElementById('q-form-text').value = '';
   document.getElementById('q-form-text-en').value = '';
+  document.getElementById('q-form-comp-en').value = '';
   document.getElementById('q-form-id').value = '';
   updateQFormRoles();
   document.getElementById('q-form-role').value = currentQRole || '';
@@ -1874,6 +1884,7 @@ function editQuestion(idx) {
   document.getElementById('q-form-comp').value = q.comp;
   document.getElementById('q-form-text').value = q.text;
   document.getElementById('q-form-text-en').value = q.text_en || '';
+  document.getElementById('q-form-comp-en').value = q.comp_en || '';
   document.getElementById('q-form-id').value = q.id;
   document.getElementById('q-form-row').value = realIdx + 1; // +1 for header row
   document.getElementById('q-form').style.display = 'block';
@@ -1890,13 +1901,14 @@ async function saveQuestion() {
 
   const role = document.getElementById('q-form-role').value;
   const textEn = document.getElementById('q-form-text-en').value.trim();
+  const compEn = document.getElementById('q-form-comp-en').value.trim();
   if (!comp || !text) { showToast('Заполни компетенцию и текст вопроса'); return; }
 
   showLoading('Сохраняем и переводим...');
   try {
     const result = await gsPost({
       action: 'saveQuestion',
-      question: { cluster, role, type, comp, text, text_en: textEn, id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
+      question: { cluster, role, type, comp, text, text_en: textEn, comp_en: compEn, id, rowIndex: rowIndex ? parseInt(rowIndex) : undefined }
     });
     // If auto-translated, update the field
     if (result.text_en && !textEn) {
