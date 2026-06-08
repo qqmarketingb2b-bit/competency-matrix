@@ -1030,6 +1030,7 @@ let currentRespondents = [];
 let editMode = false;
 let currentDetailId = null;
 let currentDetailRecord = null;
+let currentSummaryText = '';
 
 // ─── SCREENS ───
 function showScreen(id) {
@@ -2197,7 +2198,7 @@ function renderDetail(r) {
       <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>${t('btn_copy')}</button>
       <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>${t('btn_edit')}</button>
       <button class="btn" id="btn-save-edit" onclick="saveEdit('${r.id}')" style="display:none">${t('btn_save_edit')}</button>
-      <button class="btn" id="btn-prepare" onclick="prepareSummary('${r.id}')" ${!hasMatrix?'style="display:none"':''}>✉ Подготовить письмо</button>
+      <button class="btn" id="btn-prepare" onclick="prepareSummary('${r.id}')" ${!hasMatrix?'style="display:none"':''} style="margin-right:8px">✉ Подготовить письмо</button>
       <button class="btn btn-primary ml-auto" id="btn-send" onclick="sendEmail('${r.id}')" style="display:none">Отправить на почту →</button>
     </div>
   `;
@@ -2284,7 +2285,7 @@ async function sendEmail(id) {
   try {
     emailjs.init({ publicKey: cfg.ejsPublicKey });
     // Use summary if available, otherwise clean full matrix
-    let cleanMatrix = currentSummaryText || (r.matrix || '')
+    let cleanMatrix = (typeof currentSummaryText !== 'undefined' && currentSummaryText) ? currentSummaryText : (r.matrix || '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
       .replace(/^#{1,3}\s*/gm, '')
