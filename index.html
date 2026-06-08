@@ -357,7 +357,6 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
       <span class="section-title-sm" style="margin:0" id="employees-label">Сотрудники</span>
       <select id="project-filter" onchange="applyProjectFilter()" class="field-input" style="max-width:180px;padding:6px 10px;font-size:13px">
         <option value="">Все проекты</option>
-        ${PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
       </select>
       <button class="btn btn-sm" onclick="loadAndRenderPanel()" style="margin-left:auto" id="btn-refresh-panel">↻ Обновить</button>
     </div>
@@ -788,7 +787,6 @@ function ok(data) {
       <div class="field-group">
         <label class="field-label">Проект</label>
         <select class="field-input" id="sa-project">
-          ${PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
         </select>
       </div>
       <div class="field-group" style="margin-bottom:1rem">
@@ -1890,6 +1888,7 @@ function parseRow(r) {
 }
 
 function renderAdminPanel() {
+  populateProjectDropdowns();
   const visibleRespondents = getFilteredRespondents();
   const total = visibleRespondents.length;
   const generated = visibleRespondents.filter(r => r.status === 'generated' || r.status === 'sent').length;
@@ -2622,6 +2621,14 @@ function deleteSubAdmin(id) {
 
 // Filter respondents by sub-admin clusters
 let activeProjectFilter = '';
+
+function populateProjectDropdowns() {
+  const opts = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  const pf = document.getElementById('project-filter');
+  if (pf) pf.innerHTML = `<option value="">${currentLang === 'en' ? 'All projects' : 'Все проекты'}</option>` + opts;
+  const sa = document.getElementById('sa-project');
+  if (sa) sa.innerHTML = opts;
+}
 
 function applyProjectFilter() {
   activeProjectFilter = document.getElementById('project-filter')?.value || '';
