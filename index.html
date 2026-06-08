@@ -3379,7 +3379,7 @@ function renderStructureList() {
     // For sub-admins: only show their clusters in this project
     const saProjectAccess = saAccess ? saAccess.find(a => a.project === p.id) : null;
     const allowedClustersForProject = saProjectAccess ? saProjectAccess.clusters : null;
-    const isMain = p.isMain || p.id === '1win_partners';
+    const isMainProject = p.isMain || p.id === '1win_partners';
     const availClusters = isMain ? ALL_CLUSTERS : AVAILABLE_CLUSTERS;
     const allActiveClusters = p.clusters || [];
     const activeClusters = allowedClustersForProject
