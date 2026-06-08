@@ -1796,11 +1796,20 @@ function applyTranslations() {
 })();
 
 // ─── ACCESS GATE ───
-function checkAccess() {
+async function checkAccess() {
   const code = document.getElementById('access-code').value;
   const err = document.getElementById('access-error');
+  const btn = document.getElementById('btn-continue');
+  btn.disabled = true;
+  btn.textContent = '...';
 
-  // Check sub-admin first — sync check from memory
+  // Load sub-admins from Sheets to check passwords
+  if (cfg.gsUrl) await loadSubAdmins();
+
+  btn.disabled = false;
+  btn.textContent = t('btn_continue');
+
+  // Check sub-admin
   const sa = checkAdminAccess(code);
 
   if (code === TEAM_PASS) {
