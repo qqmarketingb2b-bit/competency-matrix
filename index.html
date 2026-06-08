@@ -770,7 +770,10 @@ function ok(data) {
         </div>
         <div class="field-group" style="margin:0">
           <label class="field-label">Пароль для входа</label>
-          <input class="field-input" id="sa-password" type="text" placeholder="Придумай пароль">
+          <div style="display:flex;gap:8px">
+            <input class="field-input" id="sa-password" type="text" placeholder="Придумай или сгенерируй">
+            <button class="btn btn-sm" onclick="generateSAPassword()" style="flex-shrink:0;white-space:nowrap">⟳ Авто</button>
+          </div>
         </div>
       </div>
       <div class="field-group" style="margin-bottom:1rem">
@@ -820,11 +823,11 @@ const CLUSTERS = [
   { name:'PR', cluster:'pr', desc:'Медиа, мероприятия, коммуникации', desc_en:'Media, events, communications',
     roles:['PR Manager','PR&CM Manager','PR & Media Aff'] },
   { name:'Content', cluster:'content', desc:'Тексты, редактура, форматы', desc_en:'Texts, editing, formats',
-    roles:['TL Copywriters','Copywriter'] },
+    roles:['Copywriter'] },
   { name:'Performance', cluster:'performance', desc:'Реклама, аналитика, трекинг', desc_en:'Advertising, analytics, tracking',
-    roles:['Targetolog','TL Performance'] },
+    roles:['Targetolog'] },
   { name:'Management', cluster:'management', desc:'Стратегия, команда, процессы', desc_en:'Strategy, team, processes',
-    roles:['Head of SMM','Head of PR','Head of Marketing','Operation Manager'] },
+    roles:['Head of SMM','Head of PR','Head of Marketing','Operation Manager','TL Copywriters','TL Performance'] },
 ];
 const ROLES = CLUSTERS;
 const CLUSTER_LABELS = {smm:'SMM',pr:'PR',content:'Content',performance:'Performance',management:'Management'};
@@ -2496,6 +2499,15 @@ function renderSubAdminsList() {
       </div>
     </div>
   `).join('');
+}
+
+function generateSAPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+  let pwd = '';
+  for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('sa-password').value = pwd;
+  // Copy to clipboard
+  navigator.clipboard.writeText(pwd).then(() => showToast('Пароль сгенерирован и скопирован ✓')).catch(() => showToast('Пароль сгенерирован ✓'));
 }
 
 function showAddSubAdminForm() {
