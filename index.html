@@ -2489,7 +2489,7 @@ function renderQuestionList() {
 function updateQFormProject() {
   const sel = document.getElementById('q-form-project');
   if (!sel) return;
-  PROJECTS = loadProjects();
+  if (!Array.isArray(PROJECTS) || !PROJECTS.length) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   sel.innerHTML = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   sel.value = currentQProject || '1win_partners';
 }
