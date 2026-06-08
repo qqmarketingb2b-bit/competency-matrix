@@ -826,18 +826,29 @@ const PROJECTS_DEFAULT = [
   { id: 'nda', name: 'NDA', clusters: [] },
 ];
 
-// Load projects from localStorage (admin can customize)
-function loadProjects() {
+// Projects loaded from Sheets (async) — defaults used until loaded
+let PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+
+async function loadProjects() {
   try {
-    const saved = localStorage.getItem('projects_config');
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+    const data = await gsPost({ action: 'getProjects' });
+    if (Array.isArray(data) && data.length > 0) {
+      PROJECTS = data;
+    } else {
+      PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+    }
+  } catch(e) {
+    PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+  }
+  return PROJECTS;
 }
-function saveProjects(projects) {
-  localStorage.setItem('projects_config', JSON.stringify(projects));
+
+async function saveProjects(projects) {
+  PROJECTS = projects;
+  try {
+    await gsPost({ action: 'saveProjects', projects });
+  } catch(e) { console.log('saveProjects error:', e.message); }
 }
-let PROJECTS = loadProjects();
 
 // Available clusters per project (Management only in main)
 const AVAILABLE_CLUSTERS = ['smm','pr','content','performance'];
@@ -1227,8 +1238,6 @@ function renderSoftQuestions() {
 function renderProjectGrid() {
   const grid = document.getElementById('project-grid');
   if (!grid) return;
-  // Reload projects to get latest config
-  PROJECTS = loadProjects();
   grid.innerHTML = PROJECTS.map((p,i) => `
     <div class="role-card" id="project-card-${i}" onclick="selectProject(${i})" style="padding:1.25rem 1.5rem">
       <div class="role-name" style="font-size:16px;font-weight:600">${p.name}</div>
@@ -1791,8 +1800,7 @@ function checkAccess() {
   const code = document.getElementById('access-code').value;
   const err = document.getElementById('access-error');
 
-  // Check sub-admin first
-  loadSubAdmins();
+  // Check sub-admin first — sync check from memory
   const sa = checkAdminAccess(code);
 
   if (code === TEAM_PASS) {
@@ -1838,7 +1846,14 @@ function syncLangButtons() {
 }
 
 // ─── ADMIN ───
-function adminLogin() {
+async function adminLogin() {
+  showLoading('Загружаем данные...');
+  await Promise.all([
+    loadProjects(),
+    loadSettingsFromSheets(),
+    currentAdminRole === 'main' ? loadSubAdmins() : Promise.resolve()
+  ]);
+  hideLoading();
   showScreen('admin-panel');
   // Show/hide access button based on role
   const accessBtn = document.getElementById('btn-access');
@@ -2563,11 +2578,14 @@ async function deleteQuestion(qId, idx) {
 let currentAdminRole = 'main'; // 'main' or sub-admin object
 let subAdmins = [];
 
-function loadSubAdmins() {
-  try { subAdmins = JSON.parse(localStorage.getItem('sub_admins') || '[]'); } catch(e) { subAdmins = []; }
+async function loadSubAdmins() {
+  try {
+    const data = await gsPost({ action: 'getSubAdmins' });
+    subAdmins = Array.isArray(data) ? data : [];
+  } catch(e) { subAdmins = []; }
 }
-function saveSubAdminsLocal() {
-  localStorage.setItem('sub_admins', JSON.stringify(subAdmins));
+async function saveSubAdminsLocal() {
+  // Synced per-item via saveSubAdmin
 }
 
 function checkAdminAccess(code) {
@@ -2694,31 +2712,35 @@ function saveSubAdmin() {
   if (conflict || password === ADMIN_PASS || password === TEAM_PASS) {
     showToast('Этот пароль уже занят'); return;
   }
-  if (id) {
-    const idx = subAdmins.findIndex(a => a.id === id);
-    if (idx >= 0) subAdmins[idx] = { id, name, password, clusters, project, projectAccess };
-  } else {
-    subAdmins.push({ id: 'sa_' + Date.now(), name, password, clusters, project, projectAccess });
-  }
-  saveSubAdminsLocal();
-  document.getElementById('subadmin-form').style.display = 'none';
-  renderSubAdminsList();
-  showToast('Администратор сохранён ✓');
+  const saId = id || ('sa_' + Date.now());
+  const subAdmin = { id: saId, name, password, clusters, project, projectAccess };
+  showLoading('Сохраняем...');
+  try {
+    await gsPost({ action: 'saveSubAdmin', subAdmin });
+    await loadSubAdmins();
+    document.getElementById('subadmin-form').style.display = 'none';
+    renderSubAdminsList();
+    showToast('Администратор сохранён ✓');
+  } catch(e) { showToast('Ошибка: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 function deleteSubAdmin(id) {
   if (!confirm('Удалить этого администратора?')) return;
-  subAdmins = subAdmins.filter(a => a.id !== id);
-  saveSubAdminsLocal();
-  renderSubAdminsList();
-  showToast('Удалено');
+  showLoading('Удаляем...');
+  try {
+    await gsPost({ action: 'deleteSubAdmin', id });
+    await loadSubAdmins();
+    renderSubAdminsList();
+    showToast('Удалено');
+  } catch(e) { showToast('Ошибка: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 // Filter respondents by sub-admin clusters
 let activeProjectFilter = '';
 
 function populateProjectDropdowns() {
-  PROJECTS = loadProjects();
   const opts = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   const pf = document.getElementById('project-filter');
   if (pf) {
@@ -2835,20 +2857,22 @@ Write from the manager's perspective, in English, specific and to the point. No 
 let customPrompts = [];
 let activePromptId = 'default';
 
-function loadPrompts() {
+async function loadPrompts() {
   try {
-    const saved = localStorage.getItem('custom_prompts');
-    if (saved) customPrompts = JSON.parse(saved);
+    const data = await gsPost({ action: 'getPrompts' });
+    customPrompts = Array.isArray(data) ? data : [];
   } catch(e) { customPrompts = []; }
 }
 
-function savePromptsLocal() {
-  localStorage.setItem('custom_prompts', JSON.stringify(customPrompts));
+async function savePromptsLocal() {
+  // Synced to Sheets via savePrompt action
 }
 
-function openPromptsEditor() {
-  loadPrompts();
+async function openPromptsEditor() {
   showScreen('admin-prompts');
+  showLoading('Загружаем промпты...');
+  await loadPrompts();
+  hideLoading();
   renderPromptsList();
 }
 
@@ -2972,25 +2996,33 @@ function savePrompt() {
     showToast(currentLang === 'en' ? 'Fill in name and prompt text' : 'Заполни название и текст промпта');
     return;
   }
-  if (id) {
-    const idx = customPrompts.findIndex(p => p.id === id);
-    if (idx >= 0) customPrompts[idx] = { id, name, desc, text };
-  } else {
-    const ownerId = currentAdminRole === 'main' ? 'main' : currentAdminRole.id;
-    customPrompts.push({ id: 'p_' + Date.now(), name, desc, text, ownerId });
+  const promptId = id || ('p_' + Date.now());
+  const ownerId = currentAdminRole === 'main' ? 'main' : currentAdminRole.id;
+  const prompt = { id: promptId, name, desc, text, ownerId };
+  showLoading(currentLang === 'en' ? 'Saving...' : 'Сохраняем...');
+  try {
+    await gsPost({ action: 'savePrompt', prompt });
+    await loadPrompts();
+    document.getElementById('prompt-form').style.display = 'none';
+    renderPromptsList();
+    showToast(currentLang === 'en' ? 'Prompt saved ✓' : 'Промпт сохранён ✓');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
   }
-  savePromptsLocal();
-  document.getElementById('prompt-form').style.display = 'none';
-  renderPromptsList();
-  showToast(currentLang === 'en' ? 'Prompt saved ✓' : 'Промпт сохранён ✓');
 }
 
 function deletePrompt(id) {
   if (!confirm(currentLang === 'en' ? 'Delete this prompt?' : 'Удалить этот промпт?')) return;
-  customPrompts = customPrompts.filter(p => p.id !== id);
-  if (activePromptId === id) activePromptId = 'default';
-  savePromptsLocal();
-  renderPromptsList();
+  showLoading('Удаляем...');
+  try {
+    await gsPost({ action: 'deletePrompt', id });
+    await loadPrompts();
+    if (activePromptId === id) activePromptId = 'default';
+    renderPromptsList();
+  } catch(e) { showToast('Ошибка: ' + e.message); }
+  finally { hideLoading(); }
 }
 
 function getActivePromptText(data) {
@@ -3017,11 +3049,7 @@ function getActivePromptText(data) {
     .replace(/{open_answers}/g, data.openLines || '');
 }
 
-// Initialize active prompt on load
-(function() {
-  loadPrompts();
-  activePromptId = localStorage.getItem('active_prompt_id') || 'default';
-})();
+// activePromptId is session-only UI state
 
 
 // ─── STRUCTURE EDITOR ───
@@ -3029,9 +3057,11 @@ let currentStructure = []; // {cluster, name, desc, roles:[]}
 let reviewCluster = null;  // cluster being reviewed
 let reviewQuestions = [];  // [{type, comp, text, approved, comment}]
 
-function openStructureEditor() {
-  PROJECTS = loadProjects();
+async function openStructureEditor() {
   showScreen('admin-structure');
+  showLoading('Загружаем структуру...');
+  await loadProjects();
+  hideLoading();
   renderStructureList();
 }
 
@@ -3043,12 +3073,12 @@ function showAddProjectForm() {
   f.scrollIntoView({behavior:'smooth'});
 }
 
-function createProject() {
+async function createProject() {
   const name = document.getElementById('new-project-name').value.trim();
   if (!name) { showToast('Введи название проекта'); return; }
   const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
   PROJECTS.push({ id, name, clusters: [] });
-  saveProjects(PROJECTS);
+  await saveProjects(PROJECTS);
   document.getElementById('add-project-form').style.display = 'none';
   renderStructureList();
   showToast('Проект создан ✓');
@@ -3057,7 +3087,6 @@ function createProject() {
 function renderStructureList() {
   const el = document.getElementById('structure-list');
   if (!el) return;
-  PROJECTS = loadProjects();
 
   el.innerHTML = PROJECTS.map((p) => {
     const isMain = p.isMain || p.id === '1win_partners';
@@ -3100,7 +3129,7 @@ function renderStructureList() {
         }).join('')}
       </div>` : '';
 
-    const copyBtn = !isMain ? `<button class="btn btn-sm" onclick="copyQuestionsFromMain('${p.id}')" style="font-size:12px">↓ Копировать вопросы из 1win Partners</button>` : '';
+    const copyBtn = '';
     const delBtn = !isMain ? `<button class="btn btn-sm" onclick="deleteProject('${p.id}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">Удалить проект</button>` : '';
 
     return `
@@ -3127,20 +3156,20 @@ function addClusterToProject(projectId, clusterId) {
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p || p.clusters.includes(clusterId)) return;
   p.clusters.push(clusterId);
-  saveProjects(PROJECTS);
+  await saveProjects(PROJECTS);
   renderStructureList();
 }
 
-function removeClusterFromProject(projectId, clusterId) {
+async function removeClusterFromProject(projectId, clusterId) {
   if (!confirm('Удалить кластер из проекта?')) return;
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p) return;
   p.clusters = p.clusters.filter(c => c !== clusterId);
-  saveProjects(PROJECTS);
+  await saveProjects(PROJECTS);
   renderStructureList();
 }
 
-function addRoleToProject(projectId, clusterId) {
+async function addRoleToProject(projectId, clusterId) {
   const name = prompt('Введи название должности:');
   if (!name?.trim()) return;
   const p = PROJECTS.find(x => x.id === projectId);
@@ -3153,12 +3182,12 @@ function addRoleToProject(projectId, clusterId) {
   }
   if (!p.clusterRoles[clusterId].includes(name.trim())) {
     p.clusterRoles[clusterId].push(name.trim());
-    saveProjects(PROJECTS);
+    await saveProjects(PROJECTS);
     renderStructureList();
   }
 }
 
-function deleteRoleFromProject(projectId, clusterId, idx) {
+async function deleteRoleFromProject(projectId, clusterId, idx) {
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p) return;
   if (!p.clusterRoles) p.clusterRoles = {};
@@ -3174,7 +3203,7 @@ function deleteRoleFromProject(projectId, clusterId, idx) {
 function deleteProject(projectId) {
   if (!confirm('Удалить этот проект?')) return;
   PROJECTS = PROJECTS.filter(p => p.id !== projectId);
-  saveProjects(PROJECTS);
+  await saveProjects(PROJECTS);
   renderStructureList();
   showToast('Проект удалён');
 }
@@ -3424,23 +3453,11 @@ async function approveAllQuestions() {
 }
 
 function saveStructure() {
-  // Save roles back to CLUSTERS (localStorage)
-  localStorage.setItem('clusters_roles', JSON.stringify(CLUSTERS.map(c => ({ cluster: c.cluster, roles: c.roles }))));
+  // Roles now stored in PROJECTS.clusterRoles — saved via saveProjects
+  saveProjects(PROJECTS);
 }
 
-// Load saved roles on startup
-(function() {
-  try {
-    const saved = localStorage.getItem('clusters_roles');
-    if (saved) {
-      const data = JSON.parse(saved);
-      data.forEach(d => {
-        const c = CLUSTERS.find(x => x.cluster === d.cluster);
-        if (c) c.roles = d.roles;
-      });
-    }
-  } catch(e) {}
-})();
+// Roles are now stored per-project in Sheets
 </script>
 </body>
 </html>
