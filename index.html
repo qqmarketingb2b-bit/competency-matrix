@@ -2702,7 +2702,7 @@ function editSubAdmin(id) {
   document.getElementById('subadmin-form').scrollIntoView({behavior:'smooth'});
 }
 
-function saveSubAdmin() {
+async function saveSubAdmin() {
   const name = document.getElementById('sa-name').value.trim();
   const password = document.getElementById('sa-password').value.trim();
   const id = document.getElementById('sa-id').value;
@@ -2736,7 +2736,7 @@ function saveSubAdmin() {
   finally { hideLoading(); }
 }
 
-function deleteSubAdmin(id) {
+async function deleteSubAdmin(id) {
   if (!confirm('Удалить этого администратора?')) return;
   showLoading('Удаляем...');
   try {
@@ -2997,7 +2997,7 @@ function editPrompt(id) {
   document.getElementById('prompt-form').scrollIntoView({behavior:'smooth'});
 }
 
-function savePrompt() {
+async function savePrompt() {
   const name = document.getElementById('pf-name').value.trim();
   const text = document.getElementById('pf-text').value.trim();
   const id   = document.getElementById('pf-id').value;
@@ -3024,7 +3024,7 @@ function savePrompt() {
   }
 }
 
-function deletePrompt(id) {
+async function deletePrompt(id) {
   if (!confirm(currentLang === 'en' ? 'Delete this prompt?' : 'Удалить этот промпт?')) return;
   showLoading('Удаляем...');
   try {
@@ -3163,7 +3163,7 @@ function renderStructureList() {
   }).join('');
 }
 
-function addClusterToProject(projectId, clusterId) {
+async function addClusterToProject(projectId, clusterId) {
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p || p.clusters.includes(clusterId)) return;
   p.clusters.push(clusterId);
@@ -3171,7 +3171,7 @@ function addClusterToProject(projectId, clusterId) {
   renderStructureList();
 }
 
-async function removeClusterFromProject(projectId, clusterId) {
+async async function removeClusterFromProject(projectId, clusterId) {
   if (!confirm('Удалить кластер из проекта?')) return;
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p) return;
@@ -3180,7 +3180,7 @@ async function removeClusterFromProject(projectId, clusterId) {
   renderStructureList();
 }
 
-async function addRoleToProject(projectId, clusterId) {
+async async function addRoleToProject(projectId, clusterId) {
   const name = prompt('Введи название должности:');
   if (!name?.trim()) return;
   const p = PROJECTS.find(x => x.id === projectId);
@@ -3198,7 +3198,7 @@ async function addRoleToProject(projectId, clusterId) {
   }
 }
 
-async function deleteRoleFromProject(projectId, clusterId, idx) {
+async async function deleteRoleFromProject(projectId, clusterId, idx) {
   const p = PROJECTS.find(x => x.id === projectId);
   if (!p) return;
   if (!p.clusterRoles) p.clusterRoles = {};
@@ -3211,7 +3211,7 @@ async function deleteRoleFromProject(projectId, clusterId, idx) {
   renderStructureList();
 }
 
-function deleteProject(projectId) {
+async function deleteProject(projectId) {
   if (!confirm('Удалить этот проект?')) return;
   PROJECTS = PROJECTS.filter(p => p.id !== projectId);
   await saveProjects(PROJECTS);
@@ -3463,7 +3463,7 @@ async function approveAllQuestions() {
   }
 }
 
-function saveStructure() {
+async function saveStructure() {
   // Roles now stored in PROJECTS.clusterRoles — saved via saveProjects
   saveProjects(PROJECTS);
 }
