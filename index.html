@@ -2974,7 +2974,7 @@ SOFT SKILLS (самооценка 1–4, где 4 — эксперт):
 5. ПЛАН РАЗВИТИЯ
 3 конкретных шага на ближайшие 3–6 месяцев — что делать руководителю и что делать сотруднику.
 
-Пиши от лица руководителя, по-русски, конкретно и по делу. Без воды и шаблонных фраз.`;
+Пиши от лица руководителя, по-русски, конкретно и по делу. Без воды и шаблонных фраз. НЕ используй markdown: не используй **, *, #, -, — в начале строк. Пиши обычным текстом.`;
 
 const DEFAULT_PROMPT_EN = `You are an experienced marketing director at a B2B iGaming company. Based on the employee's self-assessment, create a practical competency matrix — not for HR, but for yourself as a manager: to understand what this person is capable of, where their gaps are, and how to develop them within the team.
 
@@ -3009,7 +3009,7 @@ Current grade (Junior / Middle / Senior / Lead) with justification. Is there gro
 5. DEVELOPMENT PLAN
 3 concrete steps for the next 3–6 months — what the manager should do and what the employee should do.
 
-Write from the manager's perspective, in English, specific and to the point. No filler phrases.`;
+Write from the manager's perspective, in English, specific and to the point. No filler phrases. Do NOT use markdown: no **, *, #, or - at line starts. Plain text only.`;
 
 let customPrompts = [];
 let activePromptId = 'default';
