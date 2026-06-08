@@ -1803,8 +1803,10 @@ async function checkAccess() {
   btn.disabled = true;
   btn.textContent = '...';
 
-  // Load sub-admins from Sheets to check passwords
-  if (cfg.gsUrl) await loadSubAdmins();
+  // Try to load sub-admins from Sheets (may fail if gsUrl not set yet)
+  if (cfg.gsUrl) {
+    try { await loadSubAdmins(); } catch(e) {}
+  }
 
   btn.disabled = false;
   btn.textContent = t('btn_continue');
