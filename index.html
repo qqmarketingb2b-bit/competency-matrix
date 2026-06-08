@@ -1860,6 +1860,9 @@ function adminLogin() {
   loadAndRenderPanel();
 }
 
+let _cachedRespondents = null;
+let _cacheTime = 0;
+
 async function loadAndRenderPanel() {
   showLoading('Загружаем данные из Google Sheets...');
   try {
@@ -3162,14 +3165,16 @@ function deleteProject(projectId) {
 
 async function copyQuestionsFromMain(targetProjectId) {
   if (!confirm('Скопировать все вопросы из 1win Partners в этот проект?')) return;
-  showLoading('Копируем вопросы...');
+  showLoading('Загружаем вопросы...');
   try {
     const data = await gsPost({ action: 'getQuestions' });
-    if (!Array.isArray(data) || !data.length) throw new Error('Нет вопросов');
-    for (const q of data) {
-      await gsPost({ action: 'saveQuestion', question: { ...q, id: undefined, project: targetProjectId } });
-    }
-    showToast('Вопросы скопированы ✓');
+    if (!Array.isArray(data) || !data.length) throw new Error('Нет вопросов для копирования');
+    // Prepare all questions with new project tag
+    const questions = data.map(q => ({ ...q, id: undefined, project: targetProjectId }));
+    showLoading(`Копируем ${questions.length} вопросов...`);
+    // Single bulk request instead of 198 individual ones
+    const result = await gsPost({ action: 'bulkSaveQuestions', questions });
+    showToast(`Скопировано ${result.saved} вопросов ✓`);
   } catch(e) {
     showToast('Ошибка: ' + e.message);
   } finally {
