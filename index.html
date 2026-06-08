@@ -928,17 +928,14 @@ function setSurveyLang(lang) {
 
 function applySurveyTranslations(step) {
   if (step === 1) {
-    const el = (id) => document.getElementById(id);
-    // Labels
-    const nameLabel = document.querySelector('label[for="inp-name"], .field-label');
     // Step label and title
     const stepLabel = document.querySelector('#step-1 .step-label');
     const stepTitle = document.querySelector('#step-1 .step-title');
-    const stepSub = document.querySelector('#step-1 .step-sub');
+    const stepSub   = document.querySelector('#step-1 .step-sub');
     if (stepLabel) stepLabel.textContent = t('step1_label');
     if (stepTitle) stepTitle.textContent = t('step1_title');
-    if (stepSub) stepSub.textContent = t('step1_sub');
-    // Field labels
+    if (stepSub)   stepSub.textContent   = t('step1_sub');
+    // Field labels — target them by position inside #step-1
     const labels = document.querySelectorAll('#step-1 .field-label');
     const labelKeys = ['name_label','email_label','months_label'];
     labels.forEach((l, i) => { if (labelKeys[i]) l.textContent = t(labelKeys[i]); });
@@ -949,14 +946,18 @@ function applySurveyTranslations(step) {
     const seps = document.querySelectorAll('#step-1 .section-sep');
     if (seps[0]) seps[0].textContent = t('soft_sep');
     if (seps[1]) seps[1].textContent = t('open_sep');
-    // Open questions
-    const openBlocks = document.querySelectorAll('#step-1 .q-block');
-    const openKeys = ['open_q1','open_q2','open_q3'];
-    openBlocks.forEach((b, i) => {
-      const qt = b.querySelector('.q-text');
-      if (qt && openKeys[i]) qt.textContent = t(openKeys[i]);
+    // Open questions — find all q-blocks that have a textarea (open questions only)
+    const openQTexts = [t('open_q1'), t('open_q2'), t('open_q3')];
+    const openPH     = t('open_placeholder');
+    let openIdx = 0;
+    document.querySelectorAll('#step-1 .q-block').forEach(b => {
       const ta = b.querySelector('textarea');
-      if (ta) ta.placeholder = t('open_placeholder');
+      if (ta && openIdx < openQTexts.length) {
+        const qt = b.querySelector('.q-text');
+        if (qt) qt.textContent = openQTexts[openIdx];
+        ta.placeholder = openPH;
+        openIdx++;
+      }
     });
     // Buttons
     const nextBtn = document.querySelector('#step-1 .btn-primary');
@@ -1551,8 +1552,8 @@ function renderDetail(r) {
       <div id="matrix-lang-select" style="display:flex;align-items:center;gap:8px;${hasMatrix?'display:none!important':''}">
         <span style="font-size:12px;color:var(--text-2)">Язык:</span>
         <div class="lang-switcher" style="scale:.9">
-          <button class="lang-btn active" onclick="setMatrixLang('ru',this)" id="mlang-ru">RU</button>
-          <button class="lang-btn" onclick="setMatrixLang('en',this)" id="mlang-en">EN</button>
+          <button class="lang-btn" onclick="setMatrixLang('ru',this)" id="mlang-ru">RU</button>
+          <button class="lang-btn active" onclick="setMatrixLang('en',this)" id="mlang-en">EN</button>
         </div>
       </div>
       <button class="btn btn-primary" id="btn-generate" onclick="generateMatrix('${r.id}')" ${hasMatrix?'style="display:none"':''}>✦ Сгенерировать матрицу</button>
@@ -2157,7 +2158,7 @@ async function approveAllQuestions() {
     for (const q of reviewQuestions) {
       await gsPost({
         action: 'saveQuestion',
-        question: { cluster: reviewCluster, role: reviewRole, type: q.type, comp: q.comp, text: q.text }
+        question: { cluster: reviewCluster, role: reviewRole, type: q.type, comp: q.comp, text: q.text, text_en: '' }
       });
     }
     // Update local CLUSTER_QUESTIONS only if no specific role
