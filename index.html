@@ -948,6 +948,11 @@ let currentDetailId = null;
 
 // ─── SCREENS ───
 function showScreen(id) {
+  // Block sub-admins from accessing restricted screens
+  if (currentAdminRole !== 'main' && ['admin-settings','admin-subadmins','admin-structure','admin-questions'].includes(id)) {
+    showToast(currentLang === 'en' ? 'Access denied' : 'Доступ запрещён');
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 'admin-settings') populateSettings();
@@ -1779,11 +1784,16 @@ function adminLogin() {
       ? (currentLang === 'en' ? 'Administrator' : 'Администратор')
       : currentAdminRole.name;
   }
-  // Hide structure/questions edit for sub-admins (read-only)
+  // Hide buttons for sub-admins
   const structBtn = document.getElementById('btn-structure');
   const qBtn = document.getElementById('btn-questions');
-  if (structBtn) structBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
-  if (qBtn) qBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
+  const settingsBtn = document.getElementById('btn-settings-nav');
+  const accessBtn2 = document.getElementById('btn-access');
+  const isMain = currentAdminRole === 'main';
+  if (structBtn) structBtn.style.display = isMain ? '' : 'none';
+  if (qBtn) qBtn.style.display = isMain ? '' : 'none';
+  if (settingsBtn) settingsBtn.style.display = isMain ? '' : 'none';
+  if (accessBtn2) accessBtn2.style.display = isMain ? '' : 'none';
   loadAndRenderPanel();
 }
 
@@ -2555,7 +2565,8 @@ function getFilteredRespondents() {
 function getVisiblePrompts() {
   if (currentAdminRole === 'main') return customPrompts;
   const saId = currentAdminRole.id;
-  return customPrompts.filter(p => !p.ownerId || p.ownerId === saId);
+  // Sub-admin sees only prompts they created
+  return customPrompts.filter(p => p.ownerId === saId);
 }
 
 
