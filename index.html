@@ -646,7 +646,6 @@ function ok(data) {
     <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
     <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Редактор вопросов</span>
     <span class="admin-badge" style="margin-left:8px">Администратор</span>
-    <button class="btn btn-sm" onclick="bulkImportQuestions()" id="q-import-btn" style="margin-left:auto;margin-right:8px">↓ Загрузить базу вопросов</button>
     <button class="btn btn-sm btn-primary" onclick="showAddQuestionForm()" id="q-add-btn">+ Добавить вопрос</button>
   </div>
   <div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
@@ -1112,17 +1111,16 @@ async function gsGet() {
 // ─── SURVEY TRANSLATIONS ───
 function setSurveyLang(lang) {
   setLang(lang);
-  // Update survey header buttons
   document.getElementById('survey-lang-ru').classList.toggle('active', lang === 'ru');
   document.getElementById('survey-lang-en').classList.toggle('active', lang === 'en');
-  // Re-apply translations to current step
   const activeStep = document.querySelector('.step.active');
   if (activeStep) {
     const stepNum = parseInt(activeStep.id.replace('step-',''));
     renderSoftQuestions();
     applySurveyTranslations(stepNum);
-    if (stepNum === 2) renderRoleGrid();
-    if (stepNum === 3 && currentUser.role) renderClusterQuestions();
+    if (stepNum === 2) renderProjectGrid();
+    if (stepNum === 3) renderRoleGrid();
+    if (stepNum === 4 && currentUser.role) renderClusterQuestions();
   }
 }
 
@@ -2344,6 +2342,7 @@ let allQuestions = [];
 let currentQCluster = 'all';
 
 async function openQuestionEditor(filterCluster) {
+  if (!Array.isArray(PROJECTS)) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   showScreen('admin-questions');
   if (filterCluster) {
     currentQCluster = filterCluster;
@@ -2396,7 +2395,7 @@ function filterQRole(role) {
 function updateQProjectFilter() {
   const sel = document.getElementById('q-project-filter');
   if (!sel) return;
-  PROJECTS = loadProjects();
+  if (!Array.isArray(PROJECTS)) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   sel.innerHTML = '<option value="">Все проекты</option>' +
     PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   sel.value = currentQProject;
@@ -2676,7 +2675,7 @@ function showAddSubAdminForm() {
 }
 
 function addSAProjectRow(projectId, selectedClusters) {
-  PROJECTS = loadProjects();
+  if (!Array.isArray(PROJECTS) || !PROJECTS.length) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   const container = document.getElementById('sa-projects-access');
   const rowId = 'sa-row-' + Date.now();
   const clusterOptions = ALL_CLUSTERS.map(cid => {
