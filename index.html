@@ -1247,12 +1247,15 @@ function selectProject(i) {
 }
 
 function renderRoleGrid() {
-  // Filter clusters based on selected project
   let projectClusters = CLUSTERS;
   if (selectedProject) {
     const proj = PROJECTS.find(p => p.id === selectedProject.id);
     if (proj && proj.clusters && proj.clusters.length > 0) {
-      projectClusters = CLUSTERS.filter(c => proj.clusters.includes(c.cluster));
+      // Return clusters with project-specific roles
+      projectClusters = CLUSTERS.filter(c => proj.clusters.includes(c.cluster)).map(c => ({
+        ...c,
+        roles: (proj.clusterRoles && proj.clusterRoles[c.cluster]) || c.roles
+      }));
     }
   }
   document.getElementById('role-grid').innerHTML = projectClusters.map((c,i) => `
@@ -1279,7 +1282,7 @@ function selectCluster(i) {
   // render position cards
   const picker = document.getElementById('position-picker');
   const grid = document.getElementById('position-grid');
-  grid.innerHTML = CLUSTERS[i].roles.map((r,j) => `
+  grid.innerHTML = (currentUser.role?.roles || []).map((r,j) => `
     <div class="role-card" id="pos-card-${j}" onclick="selectPosition(${j},'${r.replace(/'/g,"\'")}')" style="padding:1rem 1.25rem">
       <div class="role-name" style="font-size:14px;font-weight:500">${r}</div>
     </div>`).join('');
@@ -3064,7 +3067,9 @@ function renderStructureList() {
     const activeClusterHTML = activeClusters.map(cid => {
       const c = CLUSTERS.find(x => x.cluster === cid);
       if (!c) return '';
-      const roles = c.roles || [];
+      // Get roles for this cluster in this project (project-specific or fallback to global)
+      const projRoles = (p.clusterRoles && p.clusterRoles[cid]) || c.roles || [];
+      const roles = projRoles;
       return `
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
           <div style="display:flex;align-items:center;gap:8px;padding:.6rem 1rem;border-bottom:1px solid var(--border)">
@@ -3138,21 +3143,32 @@ function removeClusterFromProject(projectId, clusterId) {
 function addRoleToProject(projectId, clusterId) {
   const name = prompt('Введи название должности:');
   if (!name?.trim()) return;
-  const c = CLUSTERS.find(x => x.cluster === clusterId);
-  if (c && !c.roles.includes(name.trim())) {
-    c.roles.push(name.trim());
-    saveStructure();
+  const p = PROJECTS.find(x => x.id === projectId);
+  if (!p) return;
+  if (!p.clusterRoles) p.clusterRoles = {};
+  if (!p.clusterRoles[clusterId]) {
+    // Initialize with global cluster roles
+    const c = CLUSTERS.find(x => x.cluster === clusterId);
+    p.clusterRoles[clusterId] = [...(c?.roles || [])];
+  }
+  if (!p.clusterRoles[clusterId].includes(name.trim())) {
+    p.clusterRoles[clusterId].push(name.trim());
+    saveProjects(PROJECTS);
     renderStructureList();
   }
 }
 
 function deleteRoleFromProject(projectId, clusterId, idx) {
-  const c = CLUSTERS.find(x => x.cluster === clusterId);
-  if (c) {
-    c.roles.splice(idx, 1);
-    saveStructure();
-    renderStructureList();
+  const p = PROJECTS.find(x => x.id === projectId);
+  if (!p) return;
+  if (!p.clusterRoles) p.clusterRoles = {};
+  if (!p.clusterRoles[clusterId]) {
+    const c = CLUSTERS.find(x => x.cluster === clusterId);
+    p.clusterRoles[clusterId] = [...(c?.roles || [])];
   }
+  p.clusterRoles[clusterId].splice(idx, 1);
+  saveProjects(PROJECTS);
+  renderStructureList();
 }
 
 function deleteProject(projectId) {
@@ -3175,6 +3191,11 @@ async function copyQuestionsFromMain(targetProjectId) {
     // Single bulk request instead of 198 individual ones
     const result = await gsPost({ action: 'bulkSaveQuestions', questions });
     showToast(`Скопировано ${result.saved} вопросов ✓`);
+    // Ask if admin wants to open question editor for this project
+    if (confirm(`Скопировано ${result.saved} вопросов. Открыть редактор вопросов для проверки?`)) {
+      currentQProject = targetProjectId;
+      await openQuestionEditor();
+    }
   } catch(e) {
     showToast('Ошибка: ' + e.message);
   } finally {
