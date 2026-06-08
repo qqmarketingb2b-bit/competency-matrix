@@ -344,7 +344,8 @@ body { font-family: 'Onest', sans-serif; background: var(--bg); color: var(--tex
   <div class="admin-header">
     <span class="admin-logo" id="admin-logo-text">Матрица</span>
     <span class="admin-badge" id="admin-badge-text">Администратор</span>
-    <button class="btn btn-ghost btn-sm" onclick="openPromptsEditor()" style="margin-left:auto;margin-right:4px" id="btn-prompts">✦ <span id="btn-prompts-label">Промпты</span></button>
+    <button class="btn btn-ghost btn-sm" onclick="openSubAdmins()" style="margin-left:auto;margin-right:4px" id="btn-access">👥 <span id="btn-access-label">Доступ</span></button>
+    <button class="btn btn-ghost btn-sm" onclick="openPromptsEditor()" style="margin-right:4px" id="btn-prompts">✦ <span id="btn-prompts-label">Промпты</span></button>
     <button class="btn btn-ghost btn-sm" onclick="openStructureEditor()" style="margin-right:4px" id="btn-structure">⊞ <span id="btn-structure-label">Структура</span></button>
     <button class="btn btn-ghost btn-sm" onclick="openQuestionEditor()" style="margin-right:4px" id="btn-questions">✎ <span id="btn-questions-label">Вопросы</span></button>
     <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-settings')" style="margin-right:4px" id="btn-settings-nav">⚙ <span id="btn-settings-label">Настройки</span></button>
@@ -744,6 +745,56 @@ function ok(data) {
   </div>
 </div>
 
+
+<!-- SUB-ADMIN MANAGEMENT -->
+<div id="admin-subadmins" class="screen">
+  <div class="admin-header">
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('admin-panel');loadAndRenderPanel()">← Назад</button>
+    <span style="font-family:'Instrument Serif',serif;font-size:18px;margin-left:4px">Управление доступом</span>
+    <span class="admin-badge" style="margin-left:8px">Главный администратор</span>
+    <button class="btn btn-sm btn-primary" onclick="showAddSubAdminForm()" style="margin-left:auto">+ Добавить администратора</button>
+  </div>
+  <div style="max-width:860px;margin:0 auto;padding:2rem 1.5rem">
+
+    <div style="background:var(--info-light);border-radius:var(--radius-sm);padding:1rem 1.25rem;font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:1.5rem">
+      <strong style="color:var(--text)">Уровни доступа:</strong> Главный администратор видит всё. Суб-администратор видит только сотрудников своих кластеров, может генерировать матрицы и создавать промпты — только в своей зоне.
+    </div>
+
+    <!-- Form -->
+    <div id="subadmin-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:500;margin-bottom:1.25rem" id="subadmin-form-title">Новый администратор</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Имя</label>
+          <input class="field-input" id="sa-name" placeholder="Например: Таня, Head of SMM">
+        </div>
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Пароль для входа</label>
+          <input class="field-input" id="sa-password" type="text" placeholder="Придумай пароль">
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:1rem">
+        <label class="field-label">Доступ к кластерам</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="sa-clusters-picker">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="smm" style="accent-color:#9521FE"> SMM</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="pr" style="accent-color:#9521FE"> PR</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="content" style="accent-color:#9521FE"> Content</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="performance" style="accent-color:#9521FE"> Performance</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px"><input type="checkbox" value="management" style="accent-color:#9521FE"> Management</label>
+        </div>
+      </div>
+      <input type="hidden" id="sa-id">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="saveSubAdmin()">Сохранить</button>
+        <button class="btn" onclick="document.getElementById('subadmin-form').style.display='none'">Отмена</button>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div id="subadmins-list"></div>
+  </div>
+</div>
+
 <!-- LOADING -->
 <div class="loading-overlay" id="loading-overlay">
   <div class="dot-pulse"><span></span><span></span><span></span></div>
@@ -954,9 +1005,10 @@ function showStatModal(filter) {
     generated: t('stat_generated'),
     sent: t('stat_sent')
   };
+  const visible = getFilteredRespondents();
   const filtered = filter === 'all'
-    ? currentRespondents
-    : currentRespondents.filter(r => r.status === filter || (filter === 'generated' && r.status === 'sent'));
+    ? visible
+    : visible.filter(r => r.status === filter || (filter === 'generated' && r.status === 'sent'));
 
   document.getElementById('modal-title').textContent = titles[filter] + ` (${filtered.length})`;
 
@@ -1667,9 +1719,15 @@ function applyTranslations() {
 function checkAccess() {
   const code = document.getElementById('access-code').value;
   const err = document.getElementById('access-error');
+
+  // Check sub-admin first
+  loadSubAdmins();
+  const sa = checkAdminAccess(code);
+
   if (code === TEAM_PASS) {
     err.style.display = 'none';
     document.getElementById('access-code').value = '';
+    currentAdminRole = 'main'; // reset
     document.getElementById('btn-admin-login').style.display = 'none';
     document.getElementById('btn-take-survey').style.display = '';
     showScreen('home-menu');
@@ -1678,8 +1736,19 @@ function checkAccess() {
   } else if (code === ADMIN_PASS) {
     err.style.display = 'none';
     document.getElementById('access-code').value = '';
+    currentAdminRole = 'main';
     document.getElementById('btn-admin-login').style.display = '';
     document.getElementById('btn-take-survey').style.display = '';
+    showScreen('home-menu');
+    applyTranslations();
+    syncLangButtons();
+  } else if (sa) {
+    // Sub-admin login
+    err.style.display = 'none';
+    document.getElementById('access-code').value = '';
+    currentAdminRole = sa;
+    document.getElementById('btn-admin-login').style.display = '';
+    document.getElementById('btn-take-survey').style.display = 'none'; // sub-admins don't take survey
     showScreen('home-menu');
     applyTranslations();
     syncLangButtons();
@@ -1700,6 +1769,21 @@ function syncLangButtons() {
 // ─── ADMIN ───
 function adminLogin() {
   showScreen('admin-panel');
+  // Show/hide access button based on role
+  const accessBtn = document.getElementById('btn-access');
+  if (accessBtn) accessBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
+  // Update badge text for sub-admin
+  const badge = document.getElementById('admin-badge-text');
+  if (badge) {
+    badge.textContent = currentAdminRole === 'main'
+      ? (currentLang === 'en' ? 'Administrator' : 'Администратор')
+      : currentAdminRole.name;
+  }
+  // Hide structure/questions edit for sub-admins (read-only)
+  const structBtn = document.getElementById('btn-structure');
+  const qBtn = document.getElementById('btn-questions');
+  if (structBtn) structBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
+  if (qBtn) qBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
   loadAndRenderPanel();
 }
 
@@ -1742,9 +1826,10 @@ function parseRow(r) {
 }
 
 function renderAdminPanel() {
-  const total = currentRespondents.length;
-  const generated = currentRespondents.filter(r => r.status === 'generated' || r.status === 'sent').length;
-  const sent = currentRespondents.filter(r => r.status === 'sent').length;
+  const visibleRespondents = getFilteredRespondents();
+  const total = visibleRespondents.length;
+  const generated = visibleRespondents.filter(r => r.status === 'generated' || r.status === 'sent').length;
+  const sent = visibleRespondents.filter(r => r.status === 'sent').length;
 
   document.getElementById('admin-stats').innerHTML = `
     <div class="stat-card" onclick="showStatModal('all')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#9521FE'" onmouseout="this.style.borderColor='var(--border)'">
@@ -1777,7 +1862,7 @@ function renderAdminPanel() {
       : `<div class="empty-state">${currentLang === 'en' ? 'No one has completed the survey yet' : 'Пока никто не прошёл опрос'}</div>`;
     return;
   }
-  listEl.innerHTML = [...currentRespondents].reverse().map(r => `
+  listEl.innerHTML = [...visibleRespondents].reverse().map(r => `
     <div class="resp-card" onclick="openDetail('${r.id}')">
       <div class="resp-avatar">${(r.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="resp-info">
@@ -2348,6 +2433,132 @@ async function deleteQuestion(qId, idx) {
 }
 
 
+
+// ─── SUB-ADMIN ACCESS CONTROL ───
+let currentAdminRole = 'main'; // 'main' or sub-admin object
+let subAdmins = [];
+
+function loadSubAdmins() {
+  try { subAdmins = JSON.parse(localStorage.getItem('sub_admins') || '[]'); } catch(e) { subAdmins = []; }
+}
+function saveSubAdminsLocal() {
+  localStorage.setItem('sub_admins', JSON.stringify(subAdmins));
+}
+
+function checkAdminAccess(code) {
+  // Check if code matches any sub-admin
+  loadSubAdmins();
+  const sa = subAdmins.find(a => a.password === code);
+  if (sa) return sa;
+  return null;
+}
+
+function openSubAdmins() {
+  if (currentAdminRole !== 'main') { showToast('Только главный администратор'); return; }
+  loadSubAdmins();
+  showScreen('admin-subadmins');
+  renderSubAdminsList();
+}
+
+function renderSubAdminsList() {
+  const el = document.getElementById('subadmins-list');
+  if (!subAdmins.length) {
+    el.innerHTML = '<div class="empty-state">Суб-администраторов нет. Добавь первого.</div>';
+    return;
+  }
+  el.innerHTML = subAdmins.map(sa => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:50%;background:#F2EAFD;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#7B1FD4;flex-shrink:0">
+        ${sa.name.charAt(0).toUpperCase()}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500">${sa.name}</div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:2px">
+          Кластеры: ${sa.clusters.map(c => CLUSTER_LABELS[c]||c).join(', ')}
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px;font-family:monospace">
+          Пароль: ${sa.password}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="editSubAdmin('${sa.id}')" style="font-size:12px">✎</button>
+        <button class="btn btn-sm" onclick="deleteSubAdmin('${sa.id}')" style="font-size:12px;color:var(--danger);border-color:var(--danger)">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showAddSubAdminForm() {
+  document.getElementById('subadmin-form-title').textContent = 'Новый администратор';
+  document.getElementById('sa-name').value = '';
+  document.getElementById('sa-password').value = '';
+  document.getElementById('sa-id').value = '';
+  document.querySelectorAll('#sa-clusters-picker input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.getElementById('subadmin-form').style.display = 'block';
+  document.getElementById('subadmin-form').scrollIntoView({behavior:'smooth'});
+}
+
+function editSubAdmin(id) {
+  const sa = subAdmins.find(a => a.id === id);
+  if (!sa) return;
+  document.getElementById('subadmin-form-title').textContent = 'Редактировать администратора';
+  document.getElementById('sa-name').value = sa.name;
+  document.getElementById('sa-password').value = sa.password;
+  document.getElementById('sa-id').value = sa.id;
+  document.querySelectorAll('#sa-clusters-picker input[type=checkbox]').forEach(cb => {
+    cb.checked = sa.clusters.includes(cb.value);
+  });
+  document.getElementById('subadmin-form').style.display = 'block';
+  document.getElementById('subadmin-form').scrollIntoView({behavior:'smooth'});
+}
+
+function saveSubAdmin() {
+  const name = document.getElementById('sa-name').value.trim();
+  const password = document.getElementById('sa-password').value.trim();
+  const id = document.getElementById('sa-id').value;
+  const clusters = [...document.querySelectorAll('#sa-clusters-picker input:checked')].map(cb => cb.value);
+  if (!name || !password) { showToast('Заполни имя и пароль'); return; }
+  if (!clusters.length) { showToast('Выбери хотя бы один кластер'); return; }
+  // Check password not taken
+  const conflict = subAdmins.find(a => a.password === password && a.id !== id);
+  if (conflict || password === ADMIN_PASS || password === TEAM_PASS) {
+    showToast('Этот пароль уже занят'); return;
+  }
+  if (id) {
+    const idx = subAdmins.findIndex(a => a.id === id);
+    if (idx >= 0) subAdmins[idx] = { id, name, password, clusters };
+  } else {
+    subAdmins.push({ id: 'sa_' + Date.now(), name, password, clusters });
+  }
+  saveSubAdminsLocal();
+  document.getElementById('subadmin-form').style.display = 'none';
+  renderSubAdminsList();
+  showToast('Администратор сохранён ✓');
+}
+
+function deleteSubAdmin(id) {
+  if (!confirm('Удалить этого администратора?')) return;
+  subAdmins = subAdmins.filter(a => a.id !== id);
+  saveSubAdminsLocal();
+  renderSubAdminsList();
+  showToast('Удалено');
+}
+
+// Filter respondents by sub-admin clusters
+function getFilteredRespondents() {
+  if (currentAdminRole === 'main') return currentRespondents;
+  const allowed = currentAdminRole.clusters || [];
+  return currentRespondents.filter(r => allowed.includes(r.role?.cluster));
+}
+
+// Filter prompts by admin role
+function getVisiblePrompts() {
+  if (currentAdminRole === 'main') return customPrompts;
+  const saId = currentAdminRole.id;
+  return customPrompts.filter(p => !p.ownerId || p.ownerId === saId);
+}
+
+
 // ─── PROMPTS EDITOR ───
 const DEFAULT_PROMPT_RU = `Ты опытный руководитель отдела маркетинга в B2B iGaming компании. На основе самооценки сотрудника составь практическую матрицу компетенций — не для HR, а для себя как руководителя: чтобы понять на что способен человек, где у него пробелы и как его развивать внутри команды.
 
@@ -2441,9 +2652,10 @@ function openPromptsEditor() {
 
 function renderPromptsList() {
   const el = document.getElementById('prompts-list');
+  const visibleCustomPrompts = getVisiblePrompts();
   const allPrompts = [
     { id: 'default', name: currentLang === 'en' ? 'Default (Marketing Director)' : 'Дефолтный (Руководитель маркетинга)', desc: currentLang === 'en' ? 'Standard matrix from marketing director perspective' : 'Стандартная матрица с точки зрения руководителя маркетинга', isDefault: true },
-    ...customPrompts
+    ...visibleCustomPrompts
   ];
 
   el.innerHTML = allPrompts.map(p => `
@@ -2562,7 +2774,8 @@ function savePrompt() {
     const idx = customPrompts.findIndex(p => p.id === id);
     if (idx >= 0) customPrompts[idx] = { id, name, desc, text };
   } else {
-    customPrompts.push({ id: 'p_' + Date.now(), name, desc, text });
+    const ownerId = currentAdminRole === 'main' ? 'main' : currentAdminRole.id;
+    customPrompts.push({ id: 'p_' + Date.now(), name, desc, text, ownerId });
   }
   savePromptsLocal();
   document.getElementById('prompt-form').style.display = 'none';
