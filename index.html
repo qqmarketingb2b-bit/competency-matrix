@@ -2550,9 +2550,10 @@ function editPrompt(id) {
 
 function savePrompt() {
   const name = document.getElementById('pf-name').value.trim();
-  const desc = document.getElementById('pf-desc').value.trim();
   const text = document.getElementById('pf-text').value.trim();
   const id   = document.getElementById('pf-id').value;
+  const descEl = document.getElementById('pf-desc');
+  const desc = descEl ? descEl.value.trim() : '';
   if (!name || !text) {
     showToast(currentLang === 'en' ? 'Fill in name and prompt text' : 'Заполни название и текст промпта');
     return;
