@@ -834,12 +834,16 @@ async function loadProjects() {
     const data = await gsPost({ action: 'getProjects' });
     if (Array.isArray(data) && data.length > 0) {
       PROJECTS = data;
-    } else {
+    } else if (data && !data.error) {
+      // Empty but valid response — keep defaults
       PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
     }
   } catch(e) {
+    console.log('loadProjects error:', e.message);
     PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   }
+  // Always ensure PROJECTS is an array
+  if (!Array.isArray(PROJECTS)) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   return PROJECTS;
 }
 
@@ -2658,6 +2662,9 @@ function generateSAPassword() {
 }
 
 function showAddSubAdminForm() {
+  if (!Array.isArray(PROJECTS) || !PROJECTS.length) {
+    PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
+  }
   document.getElementById('subadmin-form-title').textContent = 'Новый администратор';
   document.getElementById('sa-name').value = '';
   document.getElementById('sa-password').value = '';
@@ -2756,6 +2763,7 @@ async function deleteSubAdmin(id) {
 let activeProjectFilter = '';
 
 function populateProjectDropdowns() {
+  if (!Array.isArray(PROJECTS)) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   const opts = PROJECTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   const pf = document.getElementById('project-filter');
   if (pf) {
