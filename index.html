@@ -3215,73 +3215,119 @@ function _oldGetDefaultStructure() {
 
 let reviewRole = '';
 
-async function generateQuestionsForCluster(cluster, name, desc, role, context) {
+let reviewProjectId = '';
+
+async function generateQuestionsForCluster(cluster, name, desc, role, context, projectId) {
   if (!cfg.gsUrl) { showToast('Настрой Google Sheets в ⚙ Настройках'); return; }
   reviewCluster = cluster;
   reviewRole = role || '';
+  reviewProjectId = projectId || '1win_partners';
   reviewQuestions = [];
   showScreen('question-review');
-  const titleSuffix = role ? ` — ${role}` : ` — ${name}`;
-  document.getElementById('review-title').textContent = `Вопросы${titleSuffix}`;
-  document.getElementById('review-intro').innerHTML = `Claude генерирует вопросы для ${role ? `должности <strong>${role}</strong> (кластер ${name})` : `кластера <strong>${name}</strong>`}. Подожди несколько секунд...`;
-  document.getElementById('review-list').innerHTML = '<div class="empty-state"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Генерируем вопросы...</div>';
+
+  // If role specified — generate for that role only
+  if (role) {
+    document.getElementById('review-title').textContent = `Вопросы — ${role}`;
+    document.getElementById('review-intro').innerHTML = `Генерируем вопросы для должности <strong>${role}</strong> (${name})...`;
+    document.getElementById('review-list').innerHTML = '<div class="empty-state"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Генерируем...</div>';
+    document.getElementById('review-actions').style.display = 'none';
+    const qs = await generateForRole(cluster, name, desc, role, context);
+    reviewQuestions = qs;
+    renderReviewList();
+    document.getElementById('review-intro').innerHTML = `Сгенерировано <strong>${reviewQuestions.length} вопросов</strong> для должности <strong>${role}</strong>. Апрувни, отредактируй или перегенерируй.`;
+    document.getElementById('review-actions').style.display = 'flex';
+    return;
+  }
+
+  // No role — generate per each role in cluster
+  const proj = PROJECTS.find(p => p.id === reviewProjectId);
+  const clusterObj = CLUSTERS.find(c => c.cluster === cluster);
+  const roles = (proj?.clusterRoles?.[cluster]) || clusterObj?.roles || [];
+
+  if (!roles.length) {
+    // No roles defined — generate generic
+    document.getElementById('review-title').textContent = `Вопросы — ${name}`;
+    document.getElementById('review-intro').innerHTML = `Генерируем вопросы для кластера <strong>${name}</strong>...`;
+    document.getElementById('review-list').innerHTML = '<div class="empty-state"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Генерируем...</div>';
+    document.getElementById('review-actions').style.display = 'none';
+    const qs = await generateForRole(cluster, name, desc, '', context);
+    reviewQuestions = qs;
+    renderReviewList();
+    document.getElementById('review-intro').innerHTML = `Сгенерировано <strong>${reviewQuestions.length} вопросов</strong> для кластера <strong>${name}</strong>.`;
+    document.getElementById('review-actions').style.display = 'flex';
+    return;
+  }
+
+  // Generate per each role sequentially
+  document.getElementById('review-title').textContent = `Вопросы — ${name} (${roles.length} должностей)`;
+  document.getElementById('review-intro').innerHTML = `Генерируем вопросы для <strong>${roles.length} должностей</strong> кластера <strong>${name}</strong>...`;
+  document.getElementById('review-list').innerHTML = '<div class="empty-state"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Генерируем...</div>';
   document.getElementById('review-actions').style.display = 'none';
 
-  const prompt = `Ты руководитель отдела маркетинга в B2B iGaming компании. Сгенерируй профессиональные вопросы для самооценки${role ? ` сотрудника в должности "${role}"` : ` сотрудников кластера "${name}"`}.
+  let allQuestions = [];
+  for (let i = 0; i < roles.length; i++) {
+    const r = roles[i];
+    document.getElementById('review-intro').innerHTML = `Генерируем: <strong>${r}</strong> (${i+1} из ${roles.length})...`;
+    try {
+      const qs = await generateForRole(cluster, name, desc, r, context);
+      allQuestions = allQuestions.concat(qs);
+    } catch(e) {
+      console.log('Error for role', r, e.message);
+    }
+  }
 
-Кластер: ${name}
+  reviewQuestions = allQuestions;
+  renderReviewList();
+  document.getElementById('review-intro').innerHTML = `Сгенерировано <strong>${reviewQuestions.length} вопросов</strong> для ${roles.length} должностей кластера <strong>${name}</strong>. Апрувни, отредактируй или перегенерируй.`;
+  document.getElementById('review-actions').style.display = 'flex';
+}
+
+async function generateForRole(cluster, clusterName, desc, role, context) {
+  const prompt = `Ты руководитель отдела маркетинга в B2B iGaming компании. Сгенерируй профессиональные вопросы для самооценки${role ? ` сотрудника в должности "${role}"` : ` сотрудников кластера "${clusterName}"`}.
+
+Кластер: ${clusterName}
 Описание: ${desc}
 ${role ? `Должность: ${role}` : ''}
 ${context ? 'Дополнительный контекст: ' + context : ''}
 
-Сгенерируй 8-10 пар вопросов (ситуационный + проверочный) сгруппированных по компетенциям. Каждая пара — одна компетенция.
+Сгенерируй 8-10 пар вопросов (ситуационный + проверочный) по разным компетенциям специфичным для этой должности.
 
-Ситуационный вопрос (С) — «Как ты обычно действуешь когда...» или «Опиши как ты...»
-Проверочный вопрос (П) — «Какими инструментами...» или «На что обращаешь внимание...»
+Ситуационный (С) — «Как ты обычно...» или «Опиши как ты...»
+Проверочный (П) — «Какими инструментами...» или «На что обращаешь внимание...»
 
-Формат ответа — строго JSON массив:
+Формат — строго JSON массив, без markdown:
 [
-  {"comp": "Название компетенции", "type": "С", "text": "Текст вопроса"},
-  {"comp": "Название компетенции", "type": "П", "text": "Текст вопроса"},
-  ...
-]
+  {"comp": "Компетенция", "type": "С", "role": "${role||''}", "text": "Вопрос"},
+  {"comp": "Компетенция", "type": "П", "role": "${role||''}", "text": "Вопрос"}
+]`;
 
-Только JSON, без пояснений, без markdown. Контекст B2B iGaming должен прослеживаться в вопросах где уместно.`;
-
-  try {
-    const data = await gsPost({ action: 'generateMatrix', prompt });
-    if (data.error) throw new Error(data.error);
-    let parsed;
-    try {
-      const clean = data.text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      throw new Error('Не удалось разобрать ответ Claude. Попробуй ещё раз.');
-    }
-    reviewQuestions = parsed.map(q => ({ ...q, cluster, approved: false, comment: '' }));
-    renderReviewList();
-    document.getElementById('review-intro').innerHTML = `Сгенерировано <strong>${reviewQuestions.length} вопросов</strong> для кластера <strong>${name}</strong>. Проверь каждый — апрувни, отредактируй или перегенерируй с комментарием.`;
-    document.getElementById('review-actions').style.display = 'flex';
-  } catch(e) {
-    document.getElementById('review-list').innerHTML = `<div class="empty-state" style="color:var(--danger)">Ошибка: ${e.message}</div>`;
-    document.getElementById('review-intro').textContent = 'Не удалось сгенерировать вопросы.';
-  }
+  const data = await gsPost({ action: 'generateMatrix', prompt });
+  if (data.error) throw new Error(data.error);
+  const clean = data.text.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(clean);
+  return parsed.map(q => ({ ...q, cluster, role: role||'', approved: false, comment: '' }));
 }
 
 function renderReviewList() {
   const el = document.getElementById('review-list');
   let lastComp = '';
+  let lastRole = '';
   el.innerHTML = reviewQuestions.map((q, i) => {
+    let roleHeader = '';
+    if (q.role && q.role !== lastRole) {
+      lastRole = q.role;
+      roleHeader = `<div style="font-size:13px;font-weight:600;color:#7B1FD4;background:#F2EAFD;padding:6px 12px;border-radius:6px;margin:${i===0?'0':'1.5rem'} 0 .75rem">👤 ${q.role}</div>`;
+    }
     let compHeader = '';
     if (q.comp !== lastComp) {
       lastComp = q.comp;
-      compHeader = `<div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin:${i===0?'0':'1.25rem'} 0 .5rem">${q.comp}</div>`;
+      compHeader = `<div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin:.75rem 0 .5rem">${q.comp}</div>`;
     }
     const badge = (q.type === 'С' || q.type === 'S')
       ? `<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#FDF0E8;color:#8B4513;flex-shrink:0">С</span>`
       : `<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#EEF3FA;color:#1D4E89;flex-shrink:0">П</span>`;
     const approvedStyle = q.approved ? 'border-color:#4A8C60;background:#EAF2EC' : '';
-    return `${compHeader}
+    return `${roleHeader}${compHeader}
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 1.25rem;margin-bottom:8px;${approvedStyle}" id="review-item-${i}">
       <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
         ${badge}
@@ -3349,14 +3395,18 @@ async function approveAllQuestions() {
   showLoading('Сохраняем вопросы...');
   try {
     // Delete existing questions for this cluster
-    await gsPost({ action: 'deleteClusterQuestions', cluster: reviewCluster, role: reviewRole });
-    // Save all new questions
-    for (const q of reviewQuestions) {
-      await gsPost({
-        action: 'saveQuestion',
-        question: { cluster: reviewCluster, role: reviewRole, type: q.type, comp: q.comp, text: q.text, text_en: '' }
-      });
-    }
+    await gsPost({ action: 'deleteClusterQuestions', cluster: reviewCluster, role: reviewRole, project: reviewProjectId });
+    // Bulk save all approved questions
+    const questionsToSave = reviewQuestions.map(q => ({
+      cluster: reviewCluster,
+      role: q.role || reviewRole,
+      type: q.type,
+      comp: q.comp,
+      text: q.text,
+      text_en: '',
+      project: reviewProjectId || '1win_partners'
+    }));
+    await gsPost({ action: 'bulkSaveQuestions', questions: questionsToSave });
     // Update local CLUSTER_QUESTIONS only if no specific role
     if (!reviewRole) {
       CLUSTER_QUESTIONS[reviewCluster] = reviewQuestions.map(q => ({
