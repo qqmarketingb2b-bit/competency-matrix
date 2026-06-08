@@ -2197,8 +2197,8 @@ function renderDetail(r) {
       <button class="btn" id="btn-copy" onclick="copyMatrix()" ${!hasMatrix?'style="display:none"':''}>${t('btn_copy')}</button>
       <button class="btn" id="btn-edit" onclick="toggleEdit()" ${!hasMatrix?'style="display:none"':''}>${t('btn_edit')}</button>
       <button class="btn" id="btn-save-edit" onclick="saveEdit('${r.id}')" style="display:none">${t('btn_save_edit')}</button>
-      <button class="btn" id="btn-prepare" onclick="prepareSummary('${r.id}')" ${!hasMatrix||isSent?'style="display:none"':''}>✉ Подготовить письмо</button>
-      <button class="btn btn-primary ml-auto" id="btn-send" onclick="sendEmail('${r.id}')" style="display:none">Отправить на почту →</button>
+      <button class="btn" id="btn-prepare" onclick="prepareSummary('${r.id}')" ${!hasMatrix?'style="display:none"':''}>✉ Подготовить письмо</button>
+      <button class="btn btn-primary ml-auto" id="btn-send" onclick="sendEmail('${r.id}')" ${isSent?'style="display:none"':'style="display:none"'>Отправить на почту →</button>
     </div>
   `;
 }
