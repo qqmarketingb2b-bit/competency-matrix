@@ -670,15 +670,15 @@ const SOFT_QUESTIONS = [
   'Я быстро адаптируюсь к изменениям'
 ];
 const CLUSTERS = [
-  { name:'SMM', cluster:'smm', desc:'Контент, платформы, аналитика',
+  { name:'SMM', cluster:'smm', desc:'Контент, платформы, аналитика', desc_en:'Content, platforms, analytics',
     roles:['TL SMM','SMM Manager','SMM & Media Aff','Content Producer'] },
-  { name:'PR', cluster:'pr', desc:'Медиа, мероприятия, коммуникации',
+  { name:'PR', cluster:'pr', desc:'Медиа, мероприятия, коммуникации', desc_en:'Media, events, communications',
     roles:['PR Manager','PR&CM Manager','PR & Media Aff'] },
-  { name:'Content', cluster:'content', desc:'Тексты, редактура, форматы',
+  { name:'Content', cluster:'content', desc:'Тексты, редактура, форматы', desc_en:'Texts, editing, formats',
     roles:['TL Copywriters','Copywriter'] },
-  { name:'Performance', cluster:'performance', desc:'Реклама, аналитика, трекинг',
+  { name:'Performance', cluster:'performance', desc:'Реклама, аналитика, трекинг', desc_en:'Advertising, analytics, tracking',
     roles:['Targetolog','TL Performance'] },
-  { name:'Management', cluster:'management', desc:'Стратегия, команда, процессы',
+  { name:'Management', cluster:'management', desc:'Стратегия, команда, процессы', desc_en:'Strategy, team, processes',
     roles:['Head of SMM','Head of PR','Head of Marketing','Operation Manager'] },
 ];
 const ROLES = CLUSTERS;
@@ -921,6 +921,7 @@ function setSurveyLang(lang) {
     const stepNum = parseInt(activeStep.id.replace('step-',''));
     renderSoftQuestions();
     applySurveyTranslations(stepNum);
+    if (stepNum === 2) renderRoleGrid();
     if (stepNum === 3 && currentUser.role) renderClusterQuestions();
   }
 }
@@ -968,16 +969,21 @@ function applySurveyTranslations(step) {
   if (step === 2) {
     const stepLabel = document.querySelector('#step-2 .step-label');
     const stepTitle = document.querySelector('#step-2 .step-title');
-    const stepSub = document.querySelector('#step-2 .step-sub');
+    const stepSub   = document.querySelector('#step-2 .step-sub');
     if (stepLabel) stepLabel.textContent = t('step2_label');
     if (stepTitle) stepTitle.textContent = t('step2_title');
-    if (stepSub) stepSub.textContent = t('step2_sub');
+    if (stepSub)   stepSub.textContent   = t('step2_sub');
     const btns = document.querySelectorAll('#step-2 .nav-row .btn');
     if (btns[0]) btns[0].textContent = t('btn_back');
     if (btns[1]) btns[1].textContent = t('btn_next');
-    // Position picker label
-    const posLabel = document.querySelector('.section-sep[data-pos]');
-    if (posLabel) posLabel.textContent = t('position_label');
+    // Re-render role grid with correct language
+    renderRoleGrid();
+    // Re-render position picker if visible
+    if (currentUser.role) {
+      const idx = (typeof currentStructure !== 'undefined' && currentStructure.length > 0 ? currentStructure : CLUSTERS)
+        .findIndex(c => c.cluster === currentUser.role.cluster);
+      if (idx >= 0) selectCluster(idx);
+    }
   }
   if (step === 3) {
     const stepLabel = document.querySelector('#step-3 .step-label');
@@ -1037,7 +1043,7 @@ function renderRoleGrid() {
   document.getElementById('role-grid').innerHTML = clusters.map((c,i) => `
     <div class="role-card" id="cluster-card-${i}" onclick="selectCluster(${i})" style="padding:1.25rem 1.5rem">
       <div class="role-name" style="font-size:16px;font-weight:600">${c.name}</div>
-      <div class="role-cluster" style="font-size:13px;margin-top:4px">${c.desc}</div>
+      <div class="role-cluster" style="font-size:13px;margin-top:4px">${currentLang === 'en' && c.desc_en ? c.desc_en : c.desc}</div>
     </div>`).join('');
   // position picker hidden initially
   if (!document.getElementById('position-picker')) {
@@ -1083,7 +1089,8 @@ function selectScale(group, idx, val, container) {
 
 async function renderClusterQuestions() {
   if (!currentUser.role) return;
-  document.getElementById('cluster-title').textContent = CLUSTER_LABELS[currentUser.role.cluster] + ' — профессиональные компетенции';
+  const clusterTitleSuffix = currentLang === 'en' ? ' — Professional competencies' : ' — профессиональные компетенции';
+  document.getElementById('cluster-title').textContent = CLUSTER_LABELS[currentUser.role.cluster] + clusterTitleSuffix;
   document.getElementById('cluster-questions').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-3)"><div class="dot-pulse" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>Загружаем вопросы...</div>';
   let qs;
   try {
