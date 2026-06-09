@@ -846,24 +846,42 @@ async function loadProjects() {
   try {
     const data = await gsPost({ action: 'getProjects' });
     if (Array.isArray(data) && data.length > 0) {
-      PROJECTS = data;
-    } else if (data && !data.error) {
-      // Empty but valid response — keep defaults
+      // Deduplicate by id
+      const seen = new Set();
+      const deduped = data.filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
+      // Ensure 1win Partners exists
+      if (!deduped.find(p => p.id === '1win_partners')) {
+        deduped.unshift(PROJECTS_DEFAULT[0]);
+      }
+      // Sort: 1win Partners first
+      deduped.sort((a,b) => a.id === '1win_partners' ? -1 : b.id === '1win_partners' ? 1 : 0);
+      PROJECTS = deduped;
+    } else {
       PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
     }
   } catch(e) {
     console.log('loadProjects error:', e.message);
     PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   }
-  // Always ensure PROJECTS is an array
   if (!Array.isArray(PROJECTS)) PROJECTS = JSON.parse(JSON.stringify(PROJECTS_DEFAULT));
   return PROJECTS;
 }
 
 async function saveProjects(projects) {
-  PROJECTS = projects;
+  // Deduplicate before saving
+  const seen = new Set();
+  const clean = projects.filter(p => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+  PROJECTS = clean;
   try {
-    await gsPost({ action: 'saveProjects', projects });
+    await gsPost({ action: 'saveProjects', projects: clean });
   } catch(e) { console.log('saveProjects error:', e.message); }
 }
 
@@ -3337,11 +3355,34 @@ let currentStructure = []; // {cluster, name, desc, roles:[]}
 let reviewCluster = null;  // cluster being reviewed
 let reviewQuestions = [];  // [{type, comp, text, approved, comment}]
 
+async function fixAndResetProjects() {
+  if (!confirm('Это сбросит список проектов к дефолтному (1win Partners + FAME + Performance Lab + MellAff + NDA). Кластеры и должности сохранятся. Продолжить?')) return;
+  showLoading('Исправляем...');
+  try {
+    // Keep existing cluster configs but reset to default project list
+    const existing = PROJECTS;
+    const fixed = PROJECTS_DEFAULT.map(def => {
+      const found = existing.find(p => p.id === def.id);
+      return found ? { ...def, clusters: found.clusters || def.clusters, clusterRoles: found.clusterRoles || {} } : def;
+    });
+    await saveProjects(fixed);
+    PROJECTS = fixed;
+    renderStructureList();
+    showToast('Проекты исправлены ✓');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
 async function openStructureEditor() {
   showScreen('admin-structure');
-  // Hide/show + Новый проект button based on role
+  // Hide/show buttons based on role
   const newProjBtn = document.querySelector('#admin-structure .admin-header .btn-primary');
   if (newProjBtn) newProjBtn.style.display = currentAdminRole === 'main' ? '' : 'none';
+  const fixBar = document.getElementById('structure-fix-bar');
+  if (fixBar) fixBar.style.display = currentAdminRole === 'main' ? 'block' : 'none';
   showLoading('Загружаем структуру...');
   await loadProjects();
   hideLoading();
