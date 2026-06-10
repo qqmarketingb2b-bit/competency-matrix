@@ -3536,7 +3536,8 @@ function renderStructureList() {
             ${roles.map((r,j) => `
               <div style="display:flex;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 8px 3px 10px">
                 <span style="font-size:12px">${r}</span>
-                <button onclick="generateQuestionsForCluster('${cid}','${c.name}','${c.desc}','${r.replace(/'/g,"\'").replace(/"/g,'\"')}','','${p.id}')" style="background:none;border:none;cursor:pointer;color:#9521FE;font-size:12px;padding:0 2px">✦</button>
+                <button onclick="editRolePrompt('${p.id}','${cid}','${r.replace(/'/g,"\'").replace(/"/g,'\"')}')" title="Промпт для генерации вопросов" style="background:none;border:none;cursor:pointer;color:${getRolePrompt(p.id,cid,r)?'#9521FE':'#ccc'};font-size:11px;padding:0 2px">${getRolePrompt(p.id,cid,r)?'✎●':'✎'}</button>
+                <button onclick="generateQuestionsForCluster('${cid}','${c.name}','${c.desc}','${r.replace(/'/g,"\'").replace(/"/g,'\"')}',getRolePrompt('${p.id}','${cid}','${r.replace(/'/g,"\'").replace(/"/g,'\"')}'),'${p.id}')" style="background:none;border:none;cursor:pointer;color:#9521FE;font-size:12px;padding:0 2px">✦</button>
                 <button onclick="deleteRoleFromProject('${p.id}','${cid}',${j})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;line-height:1;padding:0 2px">×</button>
               </div>`).join('')}
             <button onclick="addRoleToProject('${p.id}','${cid}')" style="background:none;border:1px dashed var(--border);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--text-2);cursor:pointer">+ добавить</button>
@@ -3835,9 +3836,9 @@ ${comment ? 'Комментарий что не так: ' + comment : ''}
 
 async function regenerateAllQuestions() {
   const cluster = reviewCluster;
-  const c = currentStructure.find(s => s.cluster === cluster);
-  if (!c) return;
-  await generateQuestionsForCluster(cluster, c.name, c.desc, reviewRole);
+  const c = CLUSTERS.find(s => s.cluster === cluster);
+  if (!c) { showToast('Кластер не найден'); return; }
+  await generateQuestionsForCluster(cluster, c.name, c.desc, reviewRole, '', reviewProjectId || '1win_partners');
 }
 
 async function approveAllQuestions() {
